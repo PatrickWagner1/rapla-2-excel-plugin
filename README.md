@@ -19,5 +19,5 @@ To create the rapla to excel plugin, create a project from git in eclipse with [
 2. Close Rapla and Rightclick again on `org.rapla.bootstrap.RaplaStandaloneLoader` and select Run As -> Run Configuration...
 3. Add the rapla-2-excel-plugin project to the classpath.
 4. Rightclick on the rpala-2-excel-plugin and select properties
-5. Add the rapla project to the classpath
+5. Add the rapla project to the projects
 6. Run the created run configurations for the `RaplaStandaloneLoader`
