@@ -5,9 +5,8 @@ import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -15,21 +14,20 @@ import java.util.List;
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 
-import org.rapla.RaplaMainContainer;
 import org.rapla.components.iolayer.IOInterface;
 import org.rapla.entities.User;
 import org.rapla.entities.domain.AppointmentBlock;
 import org.rapla.facade.CalendarSelectionModel;
-import org.rapla.facade.PeriodModel;
 import org.rapla.framework.RaplaContext;
 import org.rapla.framework.RaplaException;
 import org.rapla.gui.RaplaGUIComponent;
-import org.rapla.gui.internal.common.PeriodChooser;
 import org.rapla.gui.toolkit.DialogUI;
 import org.rapla.gui.toolkit.IdentifiableMenuEntry;
 import org.rapla.plugin.tableview.RaplaTableColumn;
 import org.rapla.plugin.tableview.TableViewExtensionPoints;
 import org.rapla.plugin.tableview.internal.TableConfig;
+
+import semesterTimeTable.excel.Lecture;;
 
 public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableMenuEntry, ActionListener {
 
@@ -67,7 +65,6 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void export(final CalendarSelectionModel model) throws Exception {
 		// generates a text file from all filtered events;
-		StringBuffer buf = new StringBuffer();
 
 		Collection<? extends RaplaTableColumn<?>> columns;
 		List<Object> objects = new ArrayList<Object>();
@@ -77,49 +74,67 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		final List<AppointmentBlock> blocks = model.getBlocks();
 		objects.addAll(blocks);
 
-		PeriodChooser periodChooser = new PeriodChooser(getContext());
-		final PeriodModel periodModel = getPeriodModel();
-		Date startDate = model.getStartDate();
-		periodChooser.setPeriodModel(periodModel);
-		periodChooser.setDate(startDate);
-		System.out.println(periodChooser.getPeriod().getName());
+		List<Lecture> lectures = new ArrayList<Lecture>();
 
-		for (RaplaTableColumn column : columns) {
-			buf.append(column.getColumnName());
-			buf.append(CELL_BREAK);
-		}
 		for (Object row : objects) {
-			buf.append(LINE_BREAK);
+			String lectureName = null;
+			Date lectureStartDate = null;
+			Date lectureEndDate = null;
+			String[] lectureResources = null;
+			String[] lectureLecturers = null;
+
 			for (RaplaTableColumn column : columns) {
 				Object value = column.getValue(row);
 				Class columnClass = column.getColumnClass();
 				boolean isDate = columnClass.isAssignableFrom(java.util.Date.class);
-				String formated = "";
+
+				// TODO Timezones
 				if (value != null) {
-					if (isDate) {
-						SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-						format.setTimeZone(getRaplaLocale().getTimeZone());
-						String timestamp = format.format((java.util.Date) value);
-						formated = timestamp;
-					} else {
-						String escaped = escape(value);
-						formated = escaped;
+					if (column.getColumnName() == getString("name")) {
+						lectureName = escape(value);
+					} else if (column.getColumnName() == getString("start_date")) {
+						if (isDate) {
+							lectureStartDate = (Date) value;
+						}
+					} else if (column.getColumnName() == getString("end_date")) {
+						if (isDate) {
+							lectureEndDate = (Date) value;
+						}
+					} else if (column.getColumnName() == getString("resources")) {
+						String[] resources = escape(value).split(", ");
+						lectureResources = new String[resources.length / 2];
+						for (int i = 0; i < lectureResources.length; i++) {
+							lectureResources[i] = resources[2 * i + 1];
+						}
+					} else if (column.getColumnName() == getString("persons")) {
+						lectureLecturers = escape(value).split(", ");
 					}
 				}
-				buf.append(formated);
-				buf.append(CELL_BREAK);
+			}
+			if (lectureName != null && lectureStartDate != null && lectureEndDate != null && lectureResources != null
+					&& lectureLecturers != null) {
+				Lecture lecture = new Lecture(lectureName, lectureStartDate, lectureEndDate, lectureResources,
+						lectureLecturers);
+				System.out.println(lectureName);
+				System.out.println(lectureStartDate);
+				System.out.println(lectureEndDate);
+				System.out.println(Arrays.toString(lectureResources));
+				System.out.println(Arrays.toString(lectureLecturers));
+				lectures.add(lecture);
 			}
 		}
-		byte[] bytes = buf.toString().getBytes();
 
-		DateFormat sdfyyyyMMdd = new SimpleDateFormat("yyyyMMdd");
-		final String calendarName = getQuery().getSystemPreferences().getEntryAsString(RaplaMainContainer.TITLE,
-				getString("rapla.title"));
-		String filename = calendarName + "-" + sdfyyyyMMdd.format(model.getStartDate()) + "-"
-				+ sdfyyyyMMdd.format(model.getEndDate()) + ".xlsx";
-		if (saveFile(bytes, filename, "xlsx")) {
-			exportFinished(getMainComponent());
-		}
+		/*
+		 * byte[] bytes = buf.toString().getBytes();
+		 * 
+		 * DateFormat sdfyyyyMMdd = new SimpleDateFormat("yyyyMMdd"); final String
+		 * calendarName =
+		 * getQuery().getSystemPreferences().getEntryAsString(RaplaMainContainer.TITLE,
+		 * getString("rapla.title")); String filename = calendarName + "-" +
+		 * sdfyyyyMMdd.format(model.getStartDate()) + "-" +
+		 * sdfyyyyMMdd.format(model.getEndDate()) + ".xlsx"; if (saveFile(bytes,
+		 * filename, "xlsx")) { exportFinished(getMainComponent()); }
+		 */
 	}
 
 	protected boolean exportFinished(Component topLevel) {
