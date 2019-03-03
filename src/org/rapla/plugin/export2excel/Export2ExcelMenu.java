@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
@@ -29,6 +30,9 @@ import org.rapla.plugin.tableview.internal.TableConfig;
 
 import semesterTimeTable.excel.Lecture;;
 
+/**
+ * Class representing the export to excel menu entry and its functionality.
+ */
 public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableMenuEntry, ActionListener {
 
 	String id = "export_file_text";
@@ -42,6 +46,11 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		item.addActionListener(this);
 	}
 
+	/**
+	 * Event handler for clicking on the export to excel menu entry.
+	 * 
+	 * @param evt
+	 */
 	public void actionPerformed(ActionEvent evt) {
 		try {
 			CalendarSelectionModel model = getService(CalendarSelectionModel.class);
@@ -62,6 +71,13 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	private static final String LINE_BREAK = "\n";
 	private static final String CELL_BREAK = ";";
 
+	/**
+	 * Method implementing the actual exporting functionality. It is called by the
+	 * event handler for clicking on the export menu entry.
+	 * 
+	 * @param model
+	 * @throws Exception
+	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void export(final CalendarSelectionModel model) throws Exception {
 		// generates a text file from all filtered events;
@@ -111,6 +127,8 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 					}
 				}
 			}
+
+			// empty resources/lecturers?
 			if (lectureName != null && lectureStartDate != null && lectureEndDate != null && lectureResources != null
 					&& lectureLecturers != null) {
 				Lecture lecture = new Lecture(lectureName, lectureStartDate, lectureEndDate, lectureResources,
