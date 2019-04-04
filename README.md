@@ -14,10 +14,12 @@ To create the rapla project, follow the steps of [BuildingRaplaWithEclipse](http
 ## Create excel plugin
 To create the rapla to excel plugin, create a project from git in eclipse with [this repository](https://github.com/patrickwagner1/rapla-2-excel-plugin).
 
+Copy a directory containing the Apache POI Version 4.0.1 to the new project and add all jar files in the Apache POI directory to the libraries in the java build path of the new project.
+
 ## Link the two projects.
 1. Rightclick on `org.rapla.bootstrap.RaplaStandaloneLoader` in the rapla project and select Run As -> Java Application to create a run entry.
 2. Close Rapla and rightclick again on `org.rapla.bootstrap.RaplaStandaloneLoader` and select Run As -> Run Configuration...
-3. Add the rapla-2-excel-plugin project to the classpath.
+3. Add the rapla-2-excel-plugin project and all jar files in the Apache POI directory to the classpath.
 4. Rightclick on the rapla-2-excel-plugin and select properties
-5. Add the rapla project to the projects
+5. Add the rapla project to the projects in the java build path
 6. Run the created run configurations for the `RaplaStandaloneLoader`
