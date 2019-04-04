@@ -1,26 +1,35 @@
 package semesterTimeTable.excel;
 
-import java.util.Date;
+import java.util.Calendar;
 
 /**
  * Class representing a lecture.
  */
 public class Lecture {
-
+	
+	/** Group id for repeat exams */
+	public static final int REPEAT_EXAM_ID = 1;
+	
+	/** Start String of all repeat exams */
+	public static final String REPEAT_EXAM_START_STRING = "WKL ";
+	
 	/** Name of the lecture. */
 	private String name;
 
 	/** Start date and time of the lecture. */
-	private Date startDate;
+	private Calendar startDate;
 
 	/** End date and time of the lecture. */
-	private Date endDate;
+	private Calendar endDate;
 
 	/** The resources which the lecture uses. */
 	private String[] resources;
 
 	/** The lecturers giving the lecture. */
 	private String[] lecturers;
+	
+	/** An id for a group of same lectures. */
+	private int groupId;
 
 	/**
 	 * Constructor method taking multiple resources and lecturers.
@@ -31,12 +40,13 @@ public class Lecture {
 	 * @param resources
 	 * @param lecturers
 	 */
-	public Lecture(String name, Date startDate, Date endDate, String[] resources, String[] lecturers) {
+	public Lecture(String name, Calendar startDate, Calendar endDate, String[] resources, String[] lecturers) {
 		this.setName(name);
 		this.setStartDate(startDate);
 		this.setEndDate(endDate);
 		this.setResources(resources);
 		this.setLecturers(lecturers);
+		this.groupId = 0;
 	}
 
 	/**
@@ -48,12 +58,13 @@ public class Lecture {
 	 * @param resources
 	 * @param lecturer
 	 */
-	public Lecture(String name, Date startDate, Date endDate, String[] resources, String lecturer) {
+	public Lecture(String name, Calendar startDate, Calendar endDate, String[] resources, String lecturer) {
 		this.setName(name);
 		this.setStartDate(startDate);
 		this.setEndDate(endDate);
 		this.setResources(resources);
 		this.setLecturers(lecturer);
+		this.groupId = 0;
 	}
 
 	/**
@@ -65,12 +76,13 @@ public class Lecture {
 	 * @param resources
 	 * @param lecturer
 	 */
-	public Lecture(String name, Date startDate, Date endDate, String resource, String[] lecturers) {
+	public Lecture(String name, Calendar startDate, Calendar endDate, String resource, String[] lecturers) {
 		this.setName(name);
 		this.setStartDate(startDate);
 		this.setEndDate(endDate);
 		this.setResources(resource);
 		this.setLecturers(lecturers);
+		this.groupId = 0;
 	}
 
 	/**
@@ -82,12 +94,13 @@ public class Lecture {
 	 * @param resources
 	 * @param lecturer
 	 */
-	public Lecture(String name, Date startDate, Date endDate, String resource, String lecturer) {
+	public Lecture(String name, Calendar startDate, Calendar endDate, String resource, String lecturer) {
 		this.setName(name);
 		this.setStartDate(startDate);
 		this.setEndDate(endDate);
 		this.setResources(resource);
 		this.setLecturers(lecturer);
+		this.groupId = 0;
 	}
 
 	/**
@@ -113,7 +126,7 @@ public class Lecture {
 	 * 
 	 * @return Start date of the current lecture object.
 	 */
-	public Date getStartDate() {
+	public Calendar getStartDate() {
 		return this.startDate;
 	}
 
@@ -122,7 +135,7 @@ public class Lecture {
 	 * 
 	 * @param startDate
 	 */
-	private void setStartDate(Date startDate) {
+	private void setStartDate(Calendar startDate) {
 		this.startDate = startDate;
 	}
 
@@ -131,7 +144,7 @@ public class Lecture {
 	 * 
 	 * @return End date of the current lecture object.
 	 */
-	public Date getEndDate() {
+	public Calendar getEndDate() {
 		return this.endDate;
 	}
 
@@ -140,7 +153,7 @@ public class Lecture {
 	 * 
 	 * @param endDate
 	 */
-	private void setEndDate(Date endDate) {
+	private void setEndDate(Calendar endDate) {
 		this.endDate = endDate;
 	}
 
@@ -214,5 +227,23 @@ public class Lecture {
 	 */
 	private void setLecturers(String lecturer) {
 		this.lecturers = new String[] { lecturer };
+	}
+	
+	/**
+	 * Getter method for the id of a group of same lectures.
+	 * 
+	 * @return groupId (default groupId is 0)
+	 */
+	public int getGroupId() {
+		return this.groupId;
+	}
+	
+	/**
+	 * Setter method for the id of a group of same lectures.
+	 * 
+	 * @param groupId
+	 */
+	protected void setGroupId(int groupId) {
+		this.groupId = groupId;
 	}
 }

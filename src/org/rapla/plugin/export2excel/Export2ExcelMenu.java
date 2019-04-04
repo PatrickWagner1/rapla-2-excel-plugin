@@ -6,10 +6,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.TimeZone;
 
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
@@ -27,6 +29,7 @@ import org.rapla.plugin.tableview.RaplaTableColumn;
 import org.rapla.plugin.tableview.TableViewExtensionPoints;
 import org.rapla.plugin.tableview.internal.TableConfig;
 
+import semesterTimeTable.excel.ExcelGenerator;
 import semesterTimeTable.excel.Lecture;;
 
 /**
@@ -90,11 +93,13 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		objects.addAll(blocks);
 
 		List<Lecture> lectures = new ArrayList<Lecture>();
+		
+		TimeZone timeZone = getRaplaLocale().getTimeZone();
 
 		for (Object row : objects) {
 			String lectureName = null;
-			Date lectureStartDate = null;
-			Date lectureEndDate = null;
+			Calendar lectureStartDate = null;
+			Calendar lectureEndDate = null;
 			String[] lectureResources = null;
 			String[] lectureLecturers = null;
 
@@ -103,17 +108,20 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 				Class columnClass = column.getColumnClass();
 				boolean isDate = columnClass.isAssignableFrom(java.util.Date.class);
 
-				// TODO Timezones
 				if (value != null) {
 					if (column.getColumnName() == getString("name")) {
 						lectureName = escape(value);
 					} else if (column.getColumnName() == getString("start_date")) {
 						if (isDate) {
-							lectureStartDate = (Date) value;
+							lectureStartDate = new GregorianCalendar();
+							lectureStartDate.setTime((Date) value);
+							lectureStartDate.setTimeZone(timeZone);
 						}
 					} else if (column.getColumnName() == getString("end_date")) {
 						if (isDate) {
-							lectureEndDate = (Date) value;
+							lectureEndDate = new GregorianCalendar();
+							lectureEndDate.setTime((Date) value);
+							lectureEndDate.setTimeZone(timeZone);
 						}
 					} else if (column.getColumnName() == getString("resources")) {
 						String[] resources = escape(value).split(", ");
@@ -127,19 +135,11 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 				}
 			}
 
-			// empty resources/lecturers?
-			if (lectureName != null && lectureStartDate != null && lectureEndDate != null && lectureResources != null
-					&& lectureLecturers != null) {
-				Lecture lecture = new Lecture(lectureName, lectureStartDate, lectureEndDate, lectureResources,
-						lectureLecturers);
-				System.out.println(lectureName);
-				System.out.println(lectureStartDate);
-				System.out.println(lectureEndDate);
-				System.out.println(Arrays.toString(lectureResources));
-				System.out.println(Arrays.toString(lectureLecturers));
-				lectures.add(lecture);
-			}
+			Lecture lecture = new Lecture(lectureName, lectureStartDate, lectureEndDate, lectureResources,
+					lectureLecturers);
+			lectures.add(lecture);
 		}
+		ExcelGenerator excelGenearator = new ExcelGenerator(lectures);
 
 		/*
 		 * byte[] bytes = buf.toString().getBytes();
