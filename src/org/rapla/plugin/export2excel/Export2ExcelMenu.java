@@ -82,8 +82,6 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void export(final CalendarSelectionModel model) throws Exception {
-		// generates a text file from all filtered events;
-
 		Collection<? extends RaplaTableColumn<?>> columns;
 		List<Object> objects = new ArrayList<Object>();
 		User user = model.getUser();
@@ -93,7 +91,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		objects.addAll(blocks);
 
 		List<Lecture> lectures = new ArrayList<Lecture>();
-		
+
 		TimeZone timeZone = getRaplaLocale().getTimeZone();
 
 		for (Object row : objects) {
@@ -106,30 +104,27 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			for (RaplaTableColumn column : columns) {
 				Object value = column.getValue(row);
 				Class columnClass = column.getColumnClass();
+				String columnName = column.getColumnName();
 				boolean isDate = columnClass.isAssignableFrom(java.util.Date.class);
 
 				if (value != null) {
-					if (column.getColumnName() == getString("name")) {
+					if (columnName == getString("name")) {
 						lectureName = escape(value);
-					} else if (column.getColumnName() == getString("start_date")) {
-						if (isDate) {
-							lectureStartDate = new GregorianCalendar();
-							lectureStartDate.setTime((Date) value);
-							lectureStartDate.setTimeZone(timeZone);
-						}
-					} else if (column.getColumnName() == getString("end_date")) {
-						if (isDate) {
-							lectureEndDate = new GregorianCalendar();
-							lectureEndDate.setTime((Date) value);
-							lectureEndDate.setTimeZone(timeZone);
-						}
-					} else if (column.getColumnName() == getString("resources")) {
+					} else if (columnName == getString("start_date") && isDate) {
+						lectureStartDate = new GregorianCalendar();
+						lectureStartDate.setTime((Date) value);
+						lectureStartDate.setTimeZone(timeZone);
+					} else if (columnName == getString("end_date") && isDate) {
+						lectureEndDate = new GregorianCalendar();
+						lectureEndDate.setTime((Date) value);
+						lectureEndDate.setTimeZone(timeZone);
+					} else if (columnName == getString("resources")) {
 						String[] resources = escape(value).split(", ");
 						lectureResources = new String[resources.length / 2];
 						for (int i = 0; i < lectureResources.length; i++) {
 							lectureResources[i] = resources[2 * i + 1];
 						}
-					} else if (column.getColumnName() == getString("persons")) {
+					} else if (columnName == getString("persons")) {
 						lectureLecturers = escape(value).split(", ");
 					}
 				}

@@ -46,7 +46,7 @@ public class Lecture {
 		this.setEndDate(endDate);
 		this.setResources(resources);
 		this.setLecturers(lecturers);
-		this.groupId = 0;
+		this.setGroupId(0);
 	}
 
 	/**
@@ -64,7 +64,7 @@ public class Lecture {
 		this.setEndDate(endDate);
 		this.setResources(resources);
 		this.setLecturers(lecturer);
-		this.groupId = 0;
+		this.setGroupId(0);
 	}
 
 	/**
@@ -82,7 +82,7 @@ public class Lecture {
 		this.setEndDate(endDate);
 		this.setResources(resource);
 		this.setLecturers(lecturers);
-		this.groupId = 0;
+		this.setGroupId(0);
 	}
 
 	/**
@@ -100,7 +100,7 @@ public class Lecture {
 		this.setEndDate(endDate);
 		this.setResources(resource);
 		this.setLecturers(lecturer);
-		this.groupId = 0;
+		this.setGroupId(0);
 	}
 
 	/**
