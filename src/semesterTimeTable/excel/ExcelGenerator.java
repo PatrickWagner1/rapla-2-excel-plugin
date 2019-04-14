@@ -1,8 +1,10 @@
 package semesterTimeTable.excel;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -20,7 +22,7 @@ public class ExcelGenerator {
 	}
 	
 	private List<Lecture> generateLecturesGroupId(List<Lecture> lectures) {
-		Map<String, List<Lecture>> groupedLectures = lectures.stream().collect(Collectors.groupingBy(Lecture::getName));
+		Map<String, List<Lecture>> groupedLectures = new TreeMap<String, List<Lecture>>(lectures.stream().collect(Collectors.groupingBy(Lecture::getName)));
 		List<Lecture> currentLectureList;
 		int currentGroupId = 2;
 		for (Entry<String, List<Lecture>> groupedLecture : groupedLectures.entrySet()) {
@@ -40,8 +42,8 @@ public class ExcelGenerator {
 		// for loop is only for testing reasons.
 		for (Lecture lecture : lectures) {
 			System.out.println(lecture.getName() + " -- " + lecture.getGroupId());
-			if(lecture.getGroupId() < this.lectureColors.length) {
-				System.out.println(this.lectureColors[lecture.getGroupId()]);
+			if(lecture.getGroupId() <= this.lectureColors.length) {
+				System.out.println(this.lectureColors[lecture.getGroupId()-1]);
 			}
 		}
 		return lectures;

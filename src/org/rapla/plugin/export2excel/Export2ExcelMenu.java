@@ -1,9 +1,14 @@
 package org.rapla.plugin.export2excel;
 
 import java.awt.Component;
+import java.awt.FileDialog;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -16,6 +21,7 @@ import java.util.TimeZone;
 import javax.swing.JMenuItem;
 import javax.swing.SwingUtilities;
 
+import org.rapla.components.iolayer.FileContent;
 import org.rapla.components.iolayer.IOInterface;
 import org.rapla.entities.User;
 import org.rapla.entities.domain.AppointmentBlock;
@@ -56,6 +62,22 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	public void actionPerformed(ActionEvent evt) {
 		try {
 			CalendarSelectionModel model = getService(CalendarSelectionModel.class);
+			
+			TimeZone timeZone = getRaplaLocale().getTimeZone();
+			Calendar calendar = new GregorianCalendar();
+			calendar.setTime(model.getStartDate());
+			calendar.setTimeZone(timeZone);
+			int weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR);
+			int year = calendar.get(Calendar.YEAR);
+			Date startDate = weekOfYearToDate(getQuarterStartWeekForAWeek(weekOfYear), Calendar.MONDAY, year, timeZone);
+			Date endDate = weekOfYearToDate(getQuarterEndWeekForAWeek(weekOfYear), Calendar.FRIDAY, year, timeZone);
+			
+			System.out.println(startDate);
+			System.out.println(endDate);
+			
+			model.setStartDate(startDate);
+			model.setEndDate(endDate);
+
 			export(model);
 		} catch (Exception ex) {
 			showException(ex, getMainComponent());
@@ -144,9 +166,14 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		 * getQuery().getSystemPreferences().getEntryAsString(RaplaMainContainer.TITLE,
 		 * getString("rapla.title")); String filename = calendarName + "-" +
 		 * sdfyyyyMMdd.format(model.getStartDate()) + "-" +
-		 * sdfyyyyMMdd.format(model.getEndDate()) + ".xlsx"; if (saveFile(bytes,
-		 * filename, "xlsx")) { exportFinished(getMainComponent()); }
+		 * sdfyyyyMMdd.format(model.getEndDate()) + ".xlsx";
 		 */
+		String filename = "testname";
+		final String extension = "xlsx";
+		if (saveFile(loadFile(extension, filename))) {
+			exportFinished(getMainComponent());
+		}
+
 	}
 
 	protected boolean exportFinished(Component topLevel) {
@@ -167,14 +194,88 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		return cell.toString().replace(LINE_BREAK, " ").replace(CELL_BREAK, " ");
 	}
 
-	public boolean saveFile(byte[] content, String filename, String extension) throws RaplaException {
+	public boolean saveFile(String filename) throws IOException {
+		final File savedFile = new File(filename);
+		byte[] content = new byte[] {};
+		writeFile(savedFile, content);
+
+		// Open
+
+		return false;
+	}
+
+	public String loadFile(final String fileExtension, String filename) {
 		final Frame frame = (Frame) SwingUtilities.getRoot(getMainComponent());
-		IOInterface io = getService(IOInterface.class);
-		try {
-			String file = io.saveFile(frame, null, new String[] { extension }, filename, content);
-			return file != null;
-		} catch (IOException e) {
-			throw new RaplaException(e.getMessage(), e);
+		final FileDialog fd = new FileDialog(frame, "Save (and load) Excel File", FileDialog.SAVE);
+
+		fd.setFile(filename);
+
+		fd.setLocation(50, 50);
+		fd.setVisible(true);
+		final String savedFileName = fd.getFile();
+
+		if (savedFileName == null) {
+			return null;
+		} else {
+			String path = createFullPath(fd, fileExtension);
+			return path;
+		}
+	}
+
+	/*
+	 * public FileContent openFile(Frame frame,String dir, String[] fileExtensions)
+	 * throws IOException { final FileDialog fd = new FileDialog(frame, "Open File",
+	 * FileDialog.LOAD);
+	 * 
+	 * fd.setDirectory(dir); fd.setLocation(50, 50); fd.setVisible( true); final
+	 * String openFileName = fd.getFile();
+	 * 
+	 * if (openFileName == null) { return null; } String path = createFullPath(fd);
+	 * final FileInputStream openFile = new FileInputStream( path); FileContent
+	 * content = new FileContent(); content.setName( openFileName);
+	 * content.setInputStream( openFile ); return content; }
+	 */
+
+	private String createFullPath(final FileDialog fd, String extension) {
+		String filename = fd.getFile();
+		if (!filename.endsWith(extension)) {
+			filename = filename + "." + extension;
+		}
+		return fd.getDirectory() + filename;
+	}
+
+	private void writeFile(final File savedFile, byte[] content) throws IOException {
+		final FileOutputStream out;
+		out = new FileOutputStream(savedFile);
+		out.write(content);
+		out.flush();
+		out.close();
+	}
+
+	private Date weekOfYearToDate(int weekOfYear, int dayOfWeek, int year, TimeZone timeZone) {
+		Calendar calendar = new GregorianCalendar();
+		calendar.set(Calendar.DAY_OF_WEEK, dayOfWeek);
+		calendar.set(Calendar.WEEK_OF_YEAR, weekOfYear);
+		calendar.set(Calendar.YEAR, year);
+		calendar.setTimeZone(timeZone);
+		return calendar.getTime();
+	}
+
+	private int getQuarterStartWeekForAWeek(int weekOfYear) {
+		int quarter = (int) (weekOfYear / 13.0);
+		if (quarter < 2) {
+			return quarter * 13 + 2;
+		} else {
+			return quarter * 13 + 1;
+		}
+	}
+
+	private int getQuarterEndWeekForAWeek(int weekOfYear) {
+		int quarter = (int) (weekOfYear / 13.0);
+		if (quarter < 2) {
+			return quarter * 13 + 13;
+		} else {
+			return quarter * 13 + 12;
 		}
 	}
 }
