@@ -8,12 +8,18 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TimeZone;
 
 import javax.swing.JMenuItem;
@@ -31,8 +37,10 @@ import org.rapla.plugin.tableview.RaplaTableColumn;
 import org.rapla.plugin.tableview.TableViewExtensionPoints;
 import org.rapla.plugin.tableview.internal.TableConfig;
 
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
+
 import semesterTimeTable.excel.ExcelGenerator;
-import semesterTimeTable.excel.Lecture;;
+import semesterTimeTable.excel.Lecture;
 
 /**
  * Class representing the export to excel menu entry and its functionality.
@@ -58,7 +66,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	public void actionPerformed(ActionEvent evt) {
 		try {
 			CalendarSelectionModel model = getService(CalendarSelectionModel.class);
-			
+
 			TimeZone timeZone = getRaplaLocale().getTimeZone();
 			Calendar calendar = new GregorianCalendar();
 			calendar.setTime(model.getStartDate());
@@ -66,11 +74,11 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			int weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR);
 			int year = calendar.get(Calendar.YEAR);
 			Date startDate = weekOfYearToDate(getQuarterStartWeekForAWeek(weekOfYear), Calendar.MONDAY, year, timeZone);
-			Date endDate = weekOfYearToDate(getQuarterEndWeekForAWeek(weekOfYear), Calendar.FRIDAY, year, timeZone);
-			
+			Date endDate = weekOfYearToDate(getQuarterEndWeekForAWeek(weekOfYear), Calendar.SATURDAY, year, timeZone);
+
 			System.out.println(startDate);
 			System.out.println(endDate);
-			
+
 			model.setStartDate(startDate);
 			model.setEndDate(endDate);
 
@@ -112,6 +120,9 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 
 		TimeZone timeZone = getRaplaLocale().getTimeZone();
 
+		String lecturesTitle = "Vorlesungsplan";
+		Map<String, Integer> classNames = new HashMap<String, Integer>();
+
 		for (Object row : objects) {
 			String lectureName = null;
 			Calendar lectureStartDate = null;
@@ -138,10 +149,23 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 						lectureEndDate.setTimeZone(timeZone);
 					} else if (columnName == getString("resources")) {
 						String[] resources = escape(value).split(", ");
-						lectureResources = new String[resources.length / 2];
-						for (int i = 0; i < lectureResources.length; i++) {
-							lectureResources[i] = resources[2 * i + 1];
+						ArrayList<String> rooms = new ArrayList<String>();
+						for (String resource : resources) {
+							if (resource.endsWith(")")) {
+								resource = resource.replaceAll("\\(.*\\)", "");
+								int count = 0;
+								if (classNames.containsKey(resource)) {
+									count = classNames.get(resource);
+								}
+								count++;
+								classNames.put(resource, count);
+							} else {
+								rooms.add(resource);
+							}
 						}
+						lectureResources = new String[rooms.size()];
+						lectureResources = rooms.toArray(lectureResources);
+						
 					} else if (columnName == getString("persons")) {
 						lectureLecturers = escape(value).split(", ");
 					}
@@ -151,14 +175,25 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			Lecture lecture = new Lecture(lectureName, lectureStartDate, lectureEndDate, lectureResources,
 					lectureLecturers);
 			lectures.add(lecture);
+			
+			Calendar quarterStartDate = new GregorianCalendar();
+			quarterStartDate.setTime(model.getStartDate());
+			quarterStartDate.setTimeZone(getRaplaLocale().getTimeZone());
+			System.out.println(Arrays.toString(ExcelGenerator.getCellRangeFromLecture(quarterStartDate, lecture)));
 		}
+		
+		String className = getHighestCountKey(classNames);
+		if (className != null && className != "") {
+			lecturesTitle += "_" + className;
+		}
+		
 		ExcelGenerator excelGenerator = new ExcelGenerator(lectures);
-		
-		File excelTemplate = new File("Vorlesungsplan Beispiel.xlsx");
-		excelGenerator.createTemplateFromFile(excelTemplate);
-		
-		excelGenerator.saveNewFile("test1.xlsx");
-		excelGenerator.saveNewFile("test2.xlsx");
+
+		//File excelTemplate = new File(getClass().getClassLoader().getResource("Lecture_Template.xlsx").getFile());
+		//excelGenerator.createTemplateFromFile(excelTemplate);
+
+		//excelGenerator.saveNewFile("test1.xlsx");
+		//excelGenerator.saveNewFile("test2.xlsx");
 
 		/*
 		 * byte[] bytes = buf.toString().getBytes();
@@ -170,12 +205,18 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		 * sdfyyyyMMdd.format(model.getStartDate()) + "-" +
 		 * sdfyyyyMMdd.format(model.getEndDate()) + ".xlsx";
 		 */
-		String filename = "testname";
-		final String extension = "xlsx";
-		if (saveFile(loadFile(extension, filename))) {
-			exportFinished(getMainComponent());
-		}
 
+		DateFormat sdfyyyyMMdd = new SimpleDateFormat("yyyy-MM-dd");
+		String currentDate = sdfyyyyMMdd.format(new Date());
+		String filename = lecturesTitle + "_" + currentDate;
+		final String extension = "xlsx";
+		String path = loadFile(extension, filename);
+		if (path != null) {
+			boolean saveSuccessfully = saveFile(path);
+			if (saveSuccessfully) {
+				exportFinished(getMainComponent());
+			}
+		}
 	}
 
 	protected boolean exportFinished(Component topLevel) {
@@ -199,7 +240,8 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	public boolean saveFile(String filename) throws IOException {
 		final File savedFile = new File(filename);
 		byte[] content = new byte[] {};
-		writeFile(savedFile, content);
+		//writeFile(savedFile, content);
+		ExcelGenerator.saveNewFile(filename);
 
 		// Open
 
@@ -260,6 +302,9 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		calendar.set(Calendar.WEEK_OF_YEAR, weekOfYear);
 		calendar.set(Calendar.YEAR, year);
 		calendar.setTimeZone(timeZone);
+		calendar.set(Calendar.HOUR_OF_DAY, 0);
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.SECOND, 0);
 		return calendar.getTime();
 	}
 
@@ -278,6 +323,23 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			return quarter * 13 + 13;
 		} else {
 			return quarter * 13 + 12;
+		}
+	}
+	
+	private String getHighestCountKey(Map<String, Integer> map) {
+		Entry<String, Integer> highestEntry = null;
+		for (Entry<String, Integer> entry : map.entrySet()) {
+			System.out.println(entry.getKey() + ": " + entry.getValue());
+			if (highestEntry == null) {
+				highestEntry = entry;
+			} else if (entry.getValue() > highestEntry.getValue()) {
+				highestEntry = entry;
+			}
+		}
+		if (highestEntry == null) {
+			return null;
+		} else {
+			return highestEntry.getKey();
 		}
 	}
 }
