@@ -1,6 +1,11 @@
 package semesterTimeTable.excel;
 
 import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * Class representing a lecture.
@@ -245,5 +250,34 @@ public class Lecture {
 	 */
 	protected void setGroupId(int groupId) {
 		this.groupId = groupId;
+	}
+	
+	public static List<Lecture> generateLecturesGroupId(List<Lecture> lectures) {
+		Map<String, List<Lecture>> groupedLectures = new TreeMap<String, List<Lecture>>(
+				lectures.stream().collect(Collectors.groupingBy(Lecture::getName)));
+		List<Lecture> currentLectureList;
+		int currentGroupId = 2;
+		for (Entry<String, List<Lecture>> groupedLecture : groupedLectures.entrySet()) {
+			currentLectureList = groupedLecture.getValue();
+			if (groupedLecture.getKey().startsWith(Lecture.REPEAT_EXAM_START_STRING)) {
+				for (Lecture currentLecture : currentLectureList) {
+					currentLecture.setGroupId(Lecture.REPEAT_EXAM_ID);
+				}
+			} else {
+				for (Lecture currentLecture : currentLectureList) {
+					currentLecture.setGroupId(currentGroupId);
+				}
+				currentGroupId++;
+			}
+		}
+
+		// for loop is only for testing reasons.
+		for (Lecture lecture : lectures) {
+			System.out.println(lecture.getName() + " -- " + lecture.getGroupId());
+			if (lecture.getGroupId() <= LectureWorkbook.LECTURE_COLORS.length) {
+				System.out.println(LectureWorkbook.LECTURE_COLORS[lecture.getGroupId() - 1]);
+			}
+		}
+		return lectures;
 	}
 }

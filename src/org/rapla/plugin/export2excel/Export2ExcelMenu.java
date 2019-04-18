@@ -5,13 +5,10 @@ import java.awt.FileDialog;
 import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
@@ -37,9 +34,7 @@ import org.rapla.plugin.tableview.RaplaTableColumn;
 import org.rapla.plugin.tableview.TableViewExtensionPoints;
 import org.rapla.plugin.tableview.internal.TableConfig;
 
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
-import semesterTimeTable.excel.ExcelGenerator;
+import semesterTimeTable.excel.LectureWorkbook;
 import semesterTimeTable.excel.Lecture;
 
 /**
@@ -75,9 +70,6 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			int year = calendar.get(Calendar.YEAR);
 			Date startDate = weekOfYearToDate(getQuarterStartWeekForAWeek(weekOfYear), Calendar.MONDAY, year, timeZone);
 			Date endDate = weekOfYearToDate(getQuarterEndWeekForAWeek(weekOfYear), Calendar.SATURDAY, year, timeZone);
-
-			System.out.println(startDate);
-			System.out.println(endDate);
 
 			model.setStartDate(startDate);
 			model.setEndDate(endDate);
@@ -165,7 +157,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 						}
 						lectureResources = new String[rooms.size()];
 						lectureResources = rooms.toArray(lectureResources);
-						
+
 					} else if (columnName == getString("persons")) {
 						lectureLecturers = escape(value).split(", ");
 					}
@@ -175,36 +167,18 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			Lecture lecture = new Lecture(lectureName, lectureStartDate, lectureEndDate, lectureResources,
 					lectureLecturers);
 			lectures.add(lecture);
-			
-			Calendar quarterStartDate = new GregorianCalendar();
-			quarterStartDate.setTime(model.getStartDate());
-			quarterStartDate.setTimeZone(getRaplaLocale().getTimeZone());
-			System.out.println(Arrays.toString(ExcelGenerator.getCellRangeFromLecture(quarterStartDate, lecture)));
 		}
 		
+		lectures = Lecture.generateLecturesGroupId(lectures);
+
+		Calendar quarterStartDate = new GregorianCalendar();
+		quarterStartDate.setTime(model.getStartDate());
+		quarterStartDate.setTimeZone(getRaplaLocale().getTimeZone());
+
 		String className = getHighestCountKey(classNames);
 		if (className != null && className != "") {
 			lecturesTitle += "_" + className;
 		}
-		
-		ExcelGenerator excelGenerator = new ExcelGenerator(lectures);
-
-		//File excelTemplate = new File(getClass().getClassLoader().getResource("Lecture_Template.xlsx").getFile());
-		//excelGenerator.createTemplateFromFile(excelTemplate);
-
-		//excelGenerator.saveNewFile("test1.xlsx");
-		//excelGenerator.saveNewFile("test2.xlsx");
-
-		/*
-		 * byte[] bytes = buf.toString().getBytes();
-		 * 
-		 * DateFormat sdfyyyyMMdd = new SimpleDateFormat("yyyyMMdd"); final String
-		 * calendarName =
-		 * getQuery().getSystemPreferences().getEntryAsString(RaplaMainContainer.TITLE,
-		 * getString("rapla.title")); String filename = calendarName + "-" +
-		 * sdfyyyyMMdd.format(model.getStartDate()) + "-" +
-		 * sdfyyyyMMdd.format(model.getEndDate()) + ".xlsx";
-		 */
 
 		DateFormat sdfyyyyMMdd = new SimpleDateFormat("yyyy-MM-dd");
 		String currentDate = sdfyyyyMMdd.format(new Date());
@@ -212,10 +186,8 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		final String extension = "xlsx";
 		String path = loadFile(extension, filename);
 		if (path != null) {
-			boolean saveSuccessfully = saveFile(path);
-			if (saveSuccessfully) {
-				exportFinished(getMainComponent());
-			}
+			saveFile(path, quarterStartDate, lectures);
+			exportFinished(getMainComponent());
 		}
 	}
 
@@ -237,15 +209,15 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		return cell.toString().replace(LINE_BREAK, " ").replace(CELL_BREAK, " ");
 	}
 
-	public boolean saveFile(String filename) throws IOException {
-		final File savedFile = new File(filename);
-		byte[] content = new byte[] {};
-		//writeFile(savedFile, content);
-		ExcelGenerator.saveNewFile(filename);
-
-		// Open
-
-		return false;
+	public void saveFile(String filename, Calendar quarterStartDate, List<Lecture> lectures) throws RaplaException {
+		try {
+			LectureWorkbook excelGenerator = new LectureWorkbook(quarterStartDate, lectures);
+			excelGenerator.saveToFile(filename);
+		}
+		catch (IOException e) 
+		{
+			throw new RaplaException(e.getMessage(), e);
+		}
 	}
 
 	public String loadFile(final String fileExtension, String filename) {
@@ -266,34 +238,12 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		}
 	}
 
-	/*
-	 * public FileContent openFile(Frame frame,String dir, String[] fileExtensions)
-	 * throws IOException { final FileDialog fd = new FileDialog(frame, "Open File",
-	 * FileDialog.LOAD);
-	 * 
-	 * fd.setDirectory(dir); fd.setLocation(50, 50); fd.setVisible( true); final
-	 * String openFileName = fd.getFile();
-	 * 
-	 * if (openFileName == null) { return null; } String path = createFullPath(fd);
-	 * final FileInputStream openFile = new FileInputStream( path); FileContent
-	 * content = new FileContent(); content.setName( openFileName);
-	 * content.setInputStream( openFile ); return content; }
-	 */
-
 	private String createFullPath(final FileDialog fd, String extension) {
 		String filename = fd.getFile();
 		if (!filename.endsWith(extension)) {
 			filename = filename + "." + extension;
 		}
 		return fd.getDirectory() + filename;
-	}
-
-	private void writeFile(final File savedFile, byte[] content) throws IOException {
-		final FileOutputStream out;
-		out = new FileOutputStream(savedFile);
-		out.write(content);
-		out.flush();
-		out.close();
 	}
 
 	private Date weekOfYearToDate(int weekOfYear, int dayOfWeek, int year, TimeZone timeZone) {
@@ -325,11 +275,10 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			return quarter * 13 + 12;
 		}
 	}
-	
+
 	private String getHighestCountKey(Map<String, Integer> map) {
 		Entry<String, Integer> highestEntry = null;
 		for (Entry<String, Integer> entry : map.entrySet()) {
-			System.out.println(entry.getKey() + ": " + entry.getValue());
 			if (highestEntry == null) {
 				highestEntry = entry;
 			} else if (entry.getValue() > highestEntry.getValue()) {
