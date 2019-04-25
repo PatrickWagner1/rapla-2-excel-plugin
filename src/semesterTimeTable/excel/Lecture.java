@@ -274,8 +274,8 @@ public class Lecture {
 		// for loop is only for testing reasons.
 		for (Lecture lecture : lectures) {
 			System.out.println(lecture.getName() + " -- " + lecture.getGroupId());
-			if (lecture.getGroupId() <= LectureWorkbook.LECTURE_COLORS.length) {
-				System.out.println(LectureWorkbook.LECTURE_COLORS[lecture.getGroupId() - 1]);
+			if (lecture.getGroupId() < LectureWorkbook.LECTURE_COLORS.length) {
+				System.out.println(LectureWorkbook.LECTURE_COLORS[lecture.getGroupId()]);
 			}
 		}
 		return lectures;

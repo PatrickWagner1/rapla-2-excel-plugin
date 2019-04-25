@@ -182,9 +182,9 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 
 		DateFormat sdfyyyyMMdd = new SimpleDateFormat("yyyy-MM-dd");
 		String currentDate = sdfyyyyMMdd.format(new Date());
-		String filename = lecturesTitle + "_" + currentDate;
 		final String extension = "xlsx";
-		String path = loadFile(extension, filename);
+		String filename = lecturesTitle + "_" + currentDate + "." + extension;
+		String path = loadFile(filename);
 		if (path != null) {
 			saveFile(path, quarterStartDate, lectures);
 			exportFinished(getMainComponent());
@@ -211,7 +211,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 
 	public void saveFile(String filename, Calendar quarterStartDate, List<Lecture> lectures) throws RaplaException {
 		try {
-			LectureWorkbook excelGenerator = new LectureWorkbook(quarterStartDate, lectures);
+			LectureWorkbook excelGenerator = new LectureWorkbook(filename, quarterStartDate, lectures);
 			excelGenerator.saveToFile(filename);
 		}
 		catch (IOException e) 
@@ -220,7 +220,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		}
 	}
 
-	public String loadFile(final String fileExtension, String filename) {
+	public String loadFile(String filename) {
 		final Frame frame = (Frame) SwingUtilities.getRoot(getMainComponent());
 		final FileDialog fd = new FileDialog(frame, "Save (and load) Excel File", FileDialog.SAVE);
 
@@ -233,16 +233,13 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		if (savedFileName == null) {
 			return null;
 		} else {
-			String path = createFullPath(fd, fileExtension);
+			String path = createFullPath(fd);
 			return path;
 		}
 	}
 
-	private String createFullPath(final FileDialog fd, String extension) {
+	private String createFullPath(final FileDialog fd) {
 		String filename = fd.getFile();
-		if (!filename.endsWith(extension)) {
-			filename = filename + "." + extension;
-		}
 		return fd.getDirectory() + filename;
 	}
 
