@@ -45,12 +45,15 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	String id = "export_file_text";
 	JMenuItem item;
 
+	private static final String LINE_BREAK = "\n";
+	private static final String CELL_BREAK = ";";
+
 	public Export2ExcelMenu(RaplaContext sm) {
 		super(sm);
 		setChildBundleName(Export2ExcelPlugin.RESOURCE_FILE);
-		item = new JMenuItem(getString(id));
-		item.setIcon(getIcon("icon.export"));
-		item.addActionListener(this);
+		this.item = new JMenuItem(getString(this.id));
+		this.item.setIcon(getIcon("icon.export"));
+		this.item.addActionListener(this);
 	}
 
 	/**
@@ -64,10 +67,13 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 
 			TimeZone timeZone = getRaplaLocale().getTimeZone();
 			Calendar calendar = new GregorianCalendar();
+
 			calendar.setTime(model.getStartDate());
 			calendar.setTimeZone(timeZone);
+
 			int weekOfYear = calendar.get(Calendar.WEEK_OF_YEAR);
 			int year = calendar.get(Calendar.YEAR);
+
 			Date startDate = weekOfYearToDate(getQuarterStartWeekForAWeek(weekOfYear), Calendar.MONDAY, year, timeZone);
 			Date endDate = weekOfYearToDate(getQuarterEndWeekForAWeek(weekOfYear), Calendar.SATURDAY, year, timeZone);
 
@@ -80,16 +86,23 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		}
 	}
 
+	/**
+	 * Getter method for the id of the menu.
+	 * 
+	 * @return id
+	 */
 	public String getId() {
-		return id;
+		return this.id;
 	}
 
+	/**
+	 * Getter method for the menu item.
+	 * 
+	 * @return item
+	 */
 	public JMenuItem getMenuElement() {
-		return item;
+		return this.item;
 	}
-
-	private static final String LINE_BREAK = "\n";
-	private static final String CELL_BREAK = ";";
 
 	/**
 	 * Method implementing the actual exporting functionality. It is called by the
@@ -168,8 +181,8 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 					lectureLecturers);
 			lectures.add(lecture);
 		}
-		
-		lectures = Lecture.generateLecturesGroupId(lectures);
+
+		Lecture.generateLecturesGroupId(lectures);
 
 		Calendar quarterStartDate = new GregorianCalendar();
 		quarterStartDate.setTime(model.getStartDate());
@@ -205,17 +218,11 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 
 	}
 
-	private String escape(Object cell) {
-		return cell.toString().replace(LINE_BREAK, " ").replace(CELL_BREAK, " ");
-	}
-
 	public void saveFile(String filename, Calendar quarterStartDate, List<Lecture> lectures) throws RaplaException {
 		try {
 			LectureWorkbook excelGenerator = new LectureWorkbook(filename, quarterStartDate, lectures);
 			excelGenerator.saveToFile(filename);
-		}
-		catch (IOException e) 
-		{
+		} catch (IOException e) {
 			throw new RaplaException(e.getMessage(), e);
 		}
 	}
@@ -238,6 +245,10 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		}
 	}
 
+	private String escape(Object cell) {
+		return cell.toString().replace(LINE_BREAK, " ").replace(CELL_BREAK, " ");
+	}
+
 	private String createFullPath(final FileDialog fd) {
 		String filename = fd.getFile();
 		return fd.getDirectory() + filename;
@@ -256,7 +267,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	}
 
 	private int getQuarterStartWeekForAWeek(int weekOfYear) {
-		int quarter = (int) (weekOfYear / 13.0);
+		int quarter = weekOfYear / 13;
 		if (quarter < 2) {
 			return quarter * 13 + 2;
 		} else {
@@ -265,7 +276,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	}
 
 	private int getQuarterEndWeekForAWeek(int weekOfYear) {
-		int quarter = (int) (weekOfYear / 13.0);
+		int quarter = weekOfYear / 13;
 		if (quarter < 2) {
 			return quarter * 13 + 13;
 		} else {

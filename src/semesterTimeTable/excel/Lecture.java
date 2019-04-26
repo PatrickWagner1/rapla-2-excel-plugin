@@ -252,7 +252,7 @@ public class Lecture {
 		this.groupId = groupId;
 	}
 	
-	public static List<Lecture> generateLecturesGroupId(List<Lecture> lectures) {
+	public static void generateLecturesGroupId(List<Lecture> lectures) {
 		Map<String, List<Lecture>> groupedLectures = new TreeMap<String, List<Lecture>>(
 				lectures.stream().collect(Collectors.groupingBy(Lecture::getName)));
 		List<Lecture> currentLectureList;
@@ -278,6 +278,5 @@ public class Lecture {
 				System.out.println(LectureWorkbook.LECTURE_COLORS[lecture.getGroupId()]);
 			}
 		}
-		return lectures;
 	}
 }
