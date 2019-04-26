@@ -12,20 +12,17 @@ import java.util.Calendar;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.RichTextString;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
-import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFRichTextString;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class LectureWorkbook {
@@ -45,7 +42,7 @@ public class LectureWorkbook {
 			IndexedColors.LIGHT_GREEN.getIndex() };
 
 	private final static String TEMPLATE_FILENAME = "template.xlsx";
-	private Workbook workbook;
+	private XSSFWorkbook workbook;
 	private Calendar quarterStartDate;
 	private List<Lecture> lectures;
 
@@ -54,8 +51,8 @@ public class LectureWorkbook {
 	private List<List<Integer>> borderColumns;
 	private List<List<Integer>> borderRowsExamWeek;
 	private List<List<Integer>> borderRows;
-	private CellStyle[][] borderStyle;
-	private CellStyle[][] borderStyleExamWeek;
+	private XSSFCellStyle[][] borderStyle;
+	private XSSFCellStyle[][] borderStyleExamWeek;
 
 	public LectureWorkbook(Calendar quarterStartDate, List<Lecture> lectures) throws IOException {
 		this.setWorkbook(LectureWorkbook.getTemplateWorkbook());
@@ -76,16 +73,16 @@ public class LectureWorkbook {
 		this.setQuarterStartDate(quarterStartDate);
 	}
 
-	public Workbook getWorkbook() {
+	public XSSFWorkbook getWorkbook() {
 		return this.workbook;
 	}
 
-	private void setWorkbook(Workbook workbook) {
+	private void setWorkbook(XSSFWorkbook workbook) {
 		this.workbook = workbook;
 	}
 
 	public void resetWorkbook() {
-		Sheet sheet = this.workbook.getSheetAt(0);
+		XSSFSheet sheet = this.workbook.getSheetAt(0);
 		List<CellRangeAddress> ranges = sheet.getMergedRegions();
 		for (int index = sheet.getNumMergedRegions() - 1; index > -1; index--) {
 			CellRangeAddress range = ranges.get(index);
@@ -154,7 +151,7 @@ public class LectureWorkbook {
 		// leftNoTop middleNoTop rightNoTop
 		// leftGrey middleGrey rightGrey
 		// leftBlack middleBlack rightBlack
-		this.borderStyle = new CellStyle[3][3];
+		this.borderStyle = new XSSFCellStyle[3][3];
 
 		borderStyle[0][1] = this.getWorkbook().createCellStyle();
 		borderStyle[0][1].setBorderLeft(BorderStyle.THIN);
@@ -194,7 +191,7 @@ public class LectureWorkbook {
 		borderStyle[1][2].cloneStyleFrom(borderStyle[1][1]);
 		borderStyle[1][2].setBorderRight(BorderStyle.THICK);
 
-		this.borderStyleExamWeek = new CellStyle[3][3];
+		this.borderStyleExamWeek = new XSSFCellStyle[3][3];
 		for (int kindOfRow = 0; kindOfRow < 3; kindOfRow++) {
 			for (int kindOfColumn = 0; kindOfColumn < 3; kindOfColumn++) {
 				this.borderStyleExamWeek[kindOfRow][kindOfColumn] = this.getWorkbook().createCellStyle();
@@ -264,8 +261,8 @@ public class LectureWorkbook {
 		}
 	}
 
-	private void resetCell(int rowNum, int columnNum, CellStyle cellStyle) {
-		Cell cell = this.getWorkbook().getSheetAt(0).getRow(rowNum).getCell(columnNum);
+	private void resetCell(int rowNum, int columnNum, XSSFCellStyle cellStyle) {
+		XSSFCell cell = this.getWorkbook().getSheetAt(0).getRow(rowNum).getCell(columnNum);
 		cell.setBlank();
 		cell.setCellStyle(cellStyle);
 	}
@@ -307,8 +304,8 @@ public class LectureWorkbook {
 
 	private void addLectureToWorkbook(Lecture lecture) {
 		int[] cellRange = getCellRangeFromLecture(this.quarterStartDate, lecture);
-		Row row = this.getWorkbook().getSheetAt(0).getRow(cellRange[0]);
-		Cell cell = row.getCell(cellRange[2]);
+		XSSFRow row = this.getWorkbook().getSheetAt(0).getRow(cellRange[0]);
+		XSSFCell cell = row.getCell(cellRange[2]);
 		String boltText = lecture.getName();
 		String normalText = "\n";
 		if (!LectureWorkbook.hasLectureNormalTimeInterval(lecture)) {
@@ -318,7 +315,7 @@ public class LectureWorkbook {
 		}
 		normalText += arrayToString(lecture.getResources()) + "\n" + arrayToString(lecture.getLecturers());
 
-		CellStyle cellStyle = this.getWorkbook().createCellStyle();
+		XSSFCellStyle cellStyle = this.getWorkbook().createCellStyle();
 		// TODO Wrong colors in MS Excel and no colors in LibreOffice Calc
 		if (lecture.getGroupId() < LectureWorkbook.LECTURE_COLORS.length) {
 			cellStyle.setFillBackgroundColor(LectureWorkbook.LECTURE_COLORS[lecture.getGroupId()]);
@@ -334,11 +331,11 @@ public class LectureWorkbook {
 
 		// TODO better formating
 
-		Font font = new XSSFFont();
+		XSSFFont font = new XSSFFont();
 		// font.setBold(true);
 		font.setFontHeight((short) 200);
 		font.setFontName("Arial");
-		RichTextString richText = new XSSFRichTextString(boltText + normalText);
+		XSSFRichTextString richText = new XSSFRichTextString(boltText + normalText);
 		richText.applyFont(0, boltText.length(), font);
 
 		try {
@@ -428,18 +425,18 @@ public class LectureWorkbook {
 		return hour + ":" + minute;
 	}
 
-	public static Workbook loadWorkbookFromFile(File file) throws IOException {
+	public static XSSFWorkbook loadWorkbookFromFile(File file) throws IOException {
 		FileInputStream excelFile = new FileInputStream(file);
-		Workbook workbook = new XSSFWorkbook(excelFile);
+		XSSFWorkbook workbook = new XSSFWorkbook(excelFile);
 		return workbook;
 	}
 
-	public static Sheet getSheetFromWorkbook(Workbook workbook) {
-		Sheet sheet = workbook.getSheetAt(0);
+	public static XSSFSheet getSheetFromWorkbook(XSSFWorkbook workbook) {
+		XSSFSheet sheet = workbook.getSheetAt(0);
 		return sheet;
 	}
 
-	public static void saveWorkbookToFile(Workbook workbook, File file) throws IOException {
+	public static void saveWorkbookToFile(XSSFWorkbook workbook, File file) throws IOException {
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
 		workbook.write(stream);
 		byte[] content = stream.toByteArray();
@@ -456,11 +453,11 @@ public class LectureWorkbook {
 	public static void saveNewFile(String fileName) throws IOException {
 		File outFile = new File(fileName);
 		File template = new File(LectureWorkbook.class.getClassLoader().getResource("template.xlsx").getFile());
-		Workbook wbTemplate = LectureWorkbook.loadWorkbookFromFile(template);
+		XSSFWorkbook wbTemplate = LectureWorkbook.loadWorkbookFromFile(template);
 		LectureWorkbook.saveWorkbookToFile(wbTemplate, outFile);
 	}
 
-	public static Workbook getTemplateWorkbook() throws IOException {
+	public static XSSFWorkbook getTemplateWorkbook() throws IOException {
 		File file = new File(
 				LectureWorkbook.class.getClassLoader().getResource(LectureWorkbook.TEMPLATE_FILENAME).getFile());
 		return LectureWorkbook.loadWorkbookFromFile(file);
