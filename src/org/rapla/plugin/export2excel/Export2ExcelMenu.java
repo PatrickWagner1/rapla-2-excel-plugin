@@ -182,8 +182,6 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			lectures.add(lecture);
 		}
 
-		Lecture.generateLecturesGroupId(lectures);
-
 		Calendar quarterStartDate = new GregorianCalendar();
 		quarterStartDate.setTime(model.getStartDate());
 		quarterStartDate.setTimeZone(getRaplaLocale().getTimeZone());

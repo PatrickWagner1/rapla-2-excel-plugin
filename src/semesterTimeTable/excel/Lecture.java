@@ -12,12 +12,6 @@ import java.util.stream.Collectors;
  */
 public class Lecture {
 	
-	/** Group id for repeat exams */
-	public static final int REPEAT_EXAM_ID = 1;
-	
-	/** Start String of all repeat exams */
-	public static final String REPEAT_EXAM_START_STRING = "WKL ";
-	
 	/** Name of the lecture. */
 	private String name;
 
@@ -32,9 +26,6 @@ public class Lecture {
 
 	/** The lecturers giving the lecture. */
 	private String[] lecturers;
-	
-	/** An id for a group of same lectures. */
-	private int groupId;
 
 	/**
 	 * Constructor method taking multiple resources and lecturers.
@@ -51,7 +42,6 @@ public class Lecture {
 		this.setEndDate(endDate);
 		this.setResources(resources);
 		this.setLecturers(lecturers);
-		this.setGroupId(0);
 	}
 
 	/**
@@ -69,7 +59,6 @@ public class Lecture {
 		this.setEndDate(endDate);
 		this.setResources(resources);
 		this.setLecturers(lecturer);
-		this.setGroupId(0);
 	}
 
 	/**
@@ -87,7 +76,6 @@ public class Lecture {
 		this.setEndDate(endDate);
 		this.setResources(resource);
 		this.setLecturers(lecturers);
-		this.setGroupId(0);
 	}
 
 	/**
@@ -105,7 +93,6 @@ public class Lecture {
 		this.setEndDate(endDate);
 		this.setResources(resource);
 		this.setLecturers(lecturer);
-		this.setGroupId(0);
 	}
 
 	/**
@@ -232,51 +219,5 @@ public class Lecture {
 	 */
 	private void setLecturers(String lecturer) {
 		this.lecturers = new String[] { lecturer };
-	}
-	
-	/**
-	 * Getter method for the id of a group of same lectures.
-	 * 
-	 * @return groupId (default groupId is 0)
-	 */
-	public int getGroupId() {
-		return this.groupId;
-	}
-	
-	/**
-	 * Setter method for the id of a group of same lectures.
-	 * 
-	 * @param groupId
-	 */
-	protected void setGroupId(int groupId) {
-		this.groupId = groupId;
-	}
-	
-	public static void generateLecturesGroupId(List<Lecture> lectures) {
-		Map<String, List<Lecture>> groupedLectures = new TreeMap<String, List<Lecture>>(
-				lectures.stream().collect(Collectors.groupingBy(Lecture::getName)));
-		List<Lecture> currentLectureList;
-		int currentGroupId = 2;
-		for (Entry<String, List<Lecture>> groupedLecture : groupedLectures.entrySet()) {
-			currentLectureList = groupedLecture.getValue();
-			if (groupedLecture.getKey().startsWith(Lecture.REPEAT_EXAM_START_STRING)) {
-				for (Lecture currentLecture : currentLectureList) {
-					currentLecture.setGroupId(Lecture.REPEAT_EXAM_ID);
-				}
-			} else {
-				for (Lecture currentLecture : currentLectureList) {
-					currentLecture.setGroupId(currentGroupId);
-				}
-				currentGroupId++;
-			}
-		}
-
-		// for loop is only for testing reasons.
-		for (Lecture lecture : lectures) {
-			System.out.println(lecture.getName() + " -- " + lecture.getGroupId());
-			if (lecture.getGroupId() < LectureWorkbook.LECTURE_COLORS.length) {
-				System.out.println(LectureWorkbook.LECTURE_COLORS[lecture.getGroupId()]);
-			}
-		}
 	}
 }
