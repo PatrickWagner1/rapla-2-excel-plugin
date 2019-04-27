@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,11 +51,11 @@ public class LectureWorkbook {
 
 	public final static String LINE_BREAK = "\n";
 
-	private ColorWorkbook colorMap;
+	private ColorWorkbook colorWorkbook;
 
 	private XSSFWorkbook workbook;
 	private Calendar quarterStartDate;
-	private List<Lecture> lectures;
+	Map<String, List<Lecture>> groupedLectures;
 
 	private List<List<Integer>> borderColumnsLastRow;
 	private List<List<Integer>> borderColumnsExamWeek;
@@ -64,18 +65,8 @@ public class LectureWorkbook {
 	private XSSFCellStyle[][] borderStyle;
 	private XSSFCellStyle[][] borderStyleExamWeek;
 
-	public LectureWorkbook(Calendar quarterStartDate, List<Lecture> lectures) throws IOException {
-		this.colorMap = new ColorWorkbook();
-		this.setWorkbook(LectureWorkbook
-				.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(LectureWorkbook.TEMPLATE_FILENAME)));
-		this.createBorderStyles();
-		this.lectures = lectures;
-		this.setQuarterStartDate(quarterStartDate);
-	}
-
 	public LectureWorkbook(String filename, Calendar quarterStartDate, List<Lecture> lectures) throws IOException {
 		File file = new File(filename);
-		this.colorMap = new ColorWorkbook(file.getParent());
 		if (file.exists()) {
 			this.setWorkbook(LectureWorkbook.loadWorkbookFromFile(file));
 		} else {
@@ -83,7 +74,8 @@ public class LectureWorkbook {
 					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(LectureWorkbook.TEMPLATE_FILENAME)));
 		}
 		this.createBorderStyles();
-		this.lectures = lectures;
+		this.setGroupedLectures(lectures);
+		this.setColorWorkbook(new ColorWorkbook(file.getParent(), this.getLectures()));
 		this.setQuarterStartDate(quarterStartDate);
 	}
 
@@ -99,6 +91,14 @@ public class LectureWorkbook {
 
 	public static XSSFColor getXSSFColor(Color color) {
 		return new XSSFColor(color, new DefaultIndexedColorMap());
+	}
+
+	public ColorWorkbook getColorWorkbook() {
+		return this.colorWorkbook;
+	}
+
+	private void setColorWorkbook(ColorWorkbook colorWorkbook) {
+		this.colorWorkbook = colorWorkbook;
 	}
 
 	public XSSFSheet getSheet() {
@@ -123,9 +123,9 @@ public class LectureWorkbook {
 			}
 		}
 
-		this.resetLectures();
+		this.resetLecturesInWorkbook();
 
-		this.addLecturesToWorkbook(this.getLectures());
+		this.addLecturesToWorkbook();
 		this.getSheet().getRow(2).getCell(1).setCellValue(this.quarterStartDate);
 		XSSFFormulaEvaluator.evaluateAllFormulaCells(this.getWorkbook());
 	}
@@ -238,7 +238,7 @@ public class LectureWorkbook {
 		}
 	}
 
-	private void resetLectures() {
+	private void resetLecturesInWorkbook() {
 
 		// First two blocks
 		for (int block = 0; block < 2; block++) {
@@ -308,17 +308,22 @@ public class LectureWorkbook {
 		this.resetWorkbook();
 	}
 
-	public List<Lecture> getLectures() {
-		return this.lectures;
+	public Map<String, List<Lecture>> getGroupedLectures() {
+		return this.groupedLectures;
+	}
+
+	private void setGroupedLectures(List<Lecture> lectures) {
+		this.groupedLectures = new TreeMap<String, List<Lecture>>(
+				lectures.stream().collect(Collectors.groupingBy(Lecture::getName)));
+	}
+
+	public String[] getLectures() {
+		Set<String> keys = this.getGroupedLectures().keySet();
+		return keys.toArray(new String[keys.size()]);
 	}
 
 	public void setLectures(List<Lecture> lectures) {
-		this.lectures = lectures;
-		this.resetWorkbook();
-	}
-
-	public void addLectures(List<Lecture> lectures) {
-		this.lectures.addAll(lectures);
+		this.setGroupedLectures(lectures);
 		this.resetWorkbook();
 	}
 
@@ -328,18 +333,15 @@ public class LectureWorkbook {
 		this.getWorkbook().close();
 	}
 
-	public void addLecturesToWorkbook(List<Lecture> lectures) {
-		Map<String, List<Lecture>> groupedLectures = new TreeMap<String, List<Lecture>>(
-				lectures.stream().collect(Collectors.groupingBy(Lecture::getName)));
-
-		Map<String, XSSFColor[]> colorPairs = colorMap.getColorPairs();
-		Map<String, XSSFFont> highlightedFonts = colorMap.getHighlightedFonts();
-		String[] ignorePrefixes = colorMap.getIngorePrefixes();
+	private void addLecturesToWorkbook() {
+		Map<String, XSSFColor[]> colorPairs = colorWorkbook.getColorPairs();
+		Map<String, XSSFFont> highlightedFonts = colorWorkbook.getHighlightedFonts();
+		String[] ignorePrefixes = colorWorkbook.getIgnorePrefixes();
 
 		List<Lecture> groupedLectureList;
 		String groupedLectureName;
-		
-		for (Entry<String, List<Lecture>> groupedLecture : groupedLectures.entrySet()) {
+
+		for (Entry<String, List<Lecture>> groupedLecture : this.groupedLectures.entrySet()) {
 			groupedLectureList = groupedLecture.getValue();
 			groupedLectureName = groupedLecture.getKey();
 
@@ -347,14 +349,13 @@ public class LectureWorkbook {
 					highlightedFonts);
 
 			String rawLectureName = LectureWorkbook.removePrefixFromString(groupedLectureName, ignorePrefixes);
-			System.out.println(rawLectureName);
 			XSSFColor[] colorPair = LectureWorkbook.getColorPairFromMap(rawLectureName, colorPairs);
 
 			XSSFColor fontColor = null;
 			XSSFFont mainFont = new XSSFFont();
 			mainFont.setFontHeight((short) 200);
 			mainFont.setFontName("Arial");
-			
+
 			XSSFCellStyle cellStyle = this.getWorkbook().createCellStyle();
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			cellStyle.setWrapText(true);
@@ -373,8 +374,8 @@ public class LectureWorkbook {
 		}
 	}
 
-	private boolean addLectureToWorkbook(XSSFCellStyle cellStyle, XSSFFont mainFont, Map<XSSFFont, Integer[]> lectureNameFonts,
-			Lecture lecture) {
+	private boolean addLectureToWorkbook(XSSFCellStyle cellStyle, XSSFFont mainFont,
+			Map<XSSFFont, Integer[]> lectureNameFonts, Lecture lecture) {
 		boolean mergedSuccessful;
 		boolean addedSuccessful = false;
 		int[] cellRange = getCellRangeFromLecture(this.quarterStartDate, lecture);
@@ -386,8 +387,8 @@ public class LectureWorkbook {
 
 			// TODO parallel lecture handling
 			mergedSuccessful = false;
-			//System.err.println("skipped lecture: " + lecture.getName() + " at " + lecture.getStartDate() + " - "
-			//		+ lecture.getEndDate());
+			System.err.println("skipped lecture: " + lecture.getName() + " at " + lecture.getStartDate() + " - "
+					+ lecture.getEndDate());
 		}
 
 		if (mergedSuccessful) {
@@ -399,7 +400,8 @@ public class LectureWorkbook {
 		return addedSuccessful;
 	}
 
-	private XSSFRichTextString lectureToRichText(XSSFFont mainFont, Map<XSSFFont, Integer[]> lectureNameFonts, Lecture lecture) {
+	private XSSFRichTextString lectureToRichText(XSSFFont mainFont, Map<XSSFFont, Integer[]> lectureNameFonts,
+			Lecture lecture) {
 		String text = lecture.getName() + LectureWorkbook.LINE_BREAK
 				+ LectureWorkbook.arrayToString(lecture.getResources()) + LectureWorkbook.LINE_BREAK
 				+ LectureWorkbook.arrayToString(lecture.getLecturers());
@@ -483,7 +485,7 @@ public class LectureWorkbook {
 	public static XSSFColor[] getColorPairFromMap(String name, Map<String, XSSFColor[]> colorMap) {
 		XSSFColor[] color = null;
 		for (String key : colorMap.keySet()) {
-			String matchKey = "\\Q" +  key.replace("*", ".*") + "\\E";
+			String matchKey = "\\Q" + key.replace("*", "\\E.*\\Q") + "\\E";
 			if (name.matches(matchKey)) {
 				color = colorMap.get(key);
 			}
