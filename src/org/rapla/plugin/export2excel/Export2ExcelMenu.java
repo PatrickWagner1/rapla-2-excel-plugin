@@ -6,8 +6,6 @@ import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -48,12 +46,17 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	private static final String LINE_BREAK = "\n";
 	private static final String CELL_BREAK = ";";
 
+	private static final String FILE_EXTENSION = "xlsx";
+
+	private String mostCommonClassName;
+
 	public Export2ExcelMenu(RaplaContext sm) {
 		super(sm);
 		setChildBundleName(Export2ExcelPlugin.RESOURCE_FILE);
 		this.item = new JMenuItem(getString(this.id));
 		this.item.setIcon(getIcon("icon.export"));
 		this.item.addActionListener(this);
+		this.setMostCommonClassName("");
 	}
 
 	/**
@@ -108,10 +111,9 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	 * Method implementing the actual exporting functionality. It is called by the
 	 * event handler for clicking on the export menu entry.
 	 * 
-	 * @param model
+	 * @param model The calendar selection model
 	 * @throws Exception
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public void export(final CalendarSelectionModel model) throws Exception {
 		Collection<? extends RaplaTableColumn<?>> columns;
 		List<Object> objects = new ArrayList<Object>();
@@ -121,13 +123,136 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		final List<AppointmentBlock> blocks = model.getBlocks();
 		objects.addAll(blocks);
 
-		List<Lecture> lectures = new ArrayList<Lecture>();
+		List<Lecture> lectures = this.raplaObjectsToLectures(objects, columns);
 
-		TimeZone timeZone = getRaplaLocale().getTimeZone();
+		Calendar quarterStartDate = new GregorianCalendar();
+		quarterStartDate.setTime(model.getStartDate());
+		quarterStartDate.setTimeZone(getRaplaLocale().getTimeZone());
 
-		String lecturesTitle = "Vorlesungsplan";
+		String filename = this.getDefaultFileName();
+		String path = loadFile(filename);
+		if (path != null) {
+			saveFile(path, quarterStartDate, lectures);
+			exportFinished(getMainComponent());
+		}
+	}
+
+	/**
+	 * Shows dialog window with export finished message.
+	 * 
+	 * @param topLevel
+	 * @return
+	 */
+	protected boolean exportFinished(Component topLevel) {
+		try {
+			DialogUI dlg = DialogUI.create(getContext(), topLevel, true, getString("export"), getString("file_saved"),
+					new String[] { getString("ok") });
+			dlg.setIcon(getIcon("icon.export"));
+			dlg.setDefault(0);
+			dlg.start();
+			return (dlg.getSelectedIndex() == 0);
+		} catch (RaplaException e) {
+			return true;
+		}
+
+	}
+
+	/**
+	 * Saves the lectures as a workbook under the given filename. If there exists a
+	 * file with the given filename, it is used as custom template workbook for the
+	 * lectures. Otherwise the standard template workbook is used.
+	 * 
+	 * @param filename         The name for the file
+	 * @param quarterStartDate The start date of the quarter
+	 * @param lectures         a list of lectures
+	 * @throws RaplaException If loading or saving the file fails
+	 */
+	public void saveFile(String filename, Calendar quarterStartDate, List<Lecture> lectures) throws RaplaException {
+		try {
+			LectureWorkbook excelGenerator = new LectureWorkbook(filename, quarterStartDate, lectures);
+			excelGenerator.saveToFile(filename);
+		} catch (IOException e) {
+			throw new RaplaException(e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * Open a FileDialog and return the full path of the entered filename. If the
+	 * FileDialog was closed or canceled, then null is returned.
+	 * 
+	 * @param filename The default filename for the FileDialog
+	 * @return The full path of the entered filename, or null if closed or canceled
+	 *         the FileDialog
+	 */
+	public String loadFile(String filename) {
+		final Frame frame = (Frame) SwingUtilities.getRoot(getMainComponent());
+		final FileDialog fd = new FileDialog(frame, "Save (and load) Excel File", FileDialog.SAVE);
+
+		fd.setFile(filename);
+
+		fd.setLocation(50, 50);
+		fd.setVisible(true);
+		final String savedFileName = fd.getFile();
+
+		String path = null;
+		if (savedFileName != null) {
+			path = createFullPath(fd);
+		}
+
+		return path;
+	}
+
+	/**
+	 * Returns the plain string of a cell without line breaks and cell breaks.
+	 * 
+	 * @param cell
+	 * @return The plain string of a cell
+	 */
+	private String escape(Object cell) {
+		return cell.toString().replace(LINE_BREAK, " ").replace(CELL_BREAK, " ");
+	}
+
+	/**
+	 * Returns the full path of a file dialog.
+	 * 
+	 * @param fd The file dialog
+	 * @return The full path of the file dialog
+	 */
+	private String createFullPath(final FileDialog fd) {
+		String filename = fd.getFile();
+		return fd.getDirectory() + filename;
+	}
+
+	/**
+	 * Returns the default file name for lectures.
+	 * 
+	 * @return The default file name
+	 */
+	private String getDefaultFileName() {
+		String lecturesTitle = getString("lectures_file_name").replace(' ', '_');
+		String className = this.getMostCommonClassName();
+		if (className != null && className != "") {
+			lecturesTitle += "_" + className;
+		}
+
+		return lecturesTitle + "." + Export2ExcelMenu.FILE_EXTENSION;
+	}
+
+	/**
+	 * Converts a list of rapla objects into a list of lectures and sets the most
+	 * common class name from the lectures.
+	 * 
+	 * @param objects The rapla objects
+	 * @param columns The rapla columns
+	 * @return A list of lectures
+	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private List<Lecture> raplaObjectsToLectures(List<Object> objects,
+			Collection<? extends RaplaTableColumn<?>> columns) {
+
 		Map<String, Integer> classNames = new HashMap<String, Integer>();
-
+		TimeZone timeZone = getRaplaLocale().getTimeZone();
+		List<Lecture> lectures = new ArrayList<Lecture>();
 		for (Object row : objects) {
 			String lectureName = null;
 			Calendar lectureStartDate = null;
@@ -157,7 +282,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 						ArrayList<String> rooms = new ArrayList<String>();
 						for (String resource : resources) {
 							if (resource.endsWith(")")) {
-								resource = resource.replaceAll("\\(.*\\)", "");
+								resource = resource.replaceAll(" \\(.*\\)", "");
 								int count = 0;
 								if (classNames.containsKey(resource)) {
 									count = classNames.get(resource);
@@ -182,77 +307,38 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			lectures.add(lecture);
 		}
 
-		Calendar quarterStartDate = new GregorianCalendar();
-		quarterStartDate.setTime(model.getStartDate());
-		quarterStartDate.setTimeZone(getRaplaLocale().getTimeZone());
-
-		String className = getHighestCountKey(classNames);
-		if (className != null && className != "") {
-			lecturesTitle += "_" + className;
-		}
-
-		DateFormat sdfyyyyMMdd = new SimpleDateFormat("yyyy-MM-dd");
-		String currentDate = sdfyyyyMMdd.format(new Date());
-		final String extension = "xlsx";
-		String filename = lecturesTitle + "_" + currentDate + "." + extension;
-		String path = loadFile(filename);
-		if (path != null) {
-			saveFile(path, quarterStartDate, lectures);
-			exportFinished(getMainComponent());
-		}
+		this.setMostCommonClassName(getHighestCountKey(classNames));
+		return lectures;
 	}
 
-	protected boolean exportFinished(Component topLevel) {
-		try {
-			DialogUI dlg = DialogUI.create(getContext(), topLevel, true, getString("export"), getString("file_saved"),
-					new String[] { getString("ok") });
-			dlg.setIcon(getIcon("icon.export"));
-			dlg.setDefault(0);
-			dlg.start();
-			return (dlg.getSelectedIndex() == 0);
-		} catch (RaplaException e) {
-			return true;
-		}
-
+	/**
+	 * Returns the most common class name of the current export.
+	 * 
+	 * @return The most common class name
+	 */
+	private String getMostCommonClassName() {
+		return this.mostCommonClassName;
 	}
 
-	public void saveFile(String filename, Calendar quarterStartDate, List<Lecture> lectures) throws RaplaException {
-		try {
-			LectureWorkbook excelGenerator = new LectureWorkbook(filename, quarterStartDate, lectures);
-			excelGenerator.saveToFile(filename);
-		} catch (IOException e) {
-			throw new RaplaException(e.getMessage(), e);
-		}
+	/**
+	 * Sets the most common class name of the current export.
+	 * 
+	 * @param mostCommonClassName The most common class name
+	 */
+	private void setMostCommonClassName(String mostCommonClassName) {
+		this.mostCommonClassName = mostCommonClassName;
 	}
 
-	public String loadFile(String filename) {
-		final Frame frame = (Frame) SwingUtilities.getRoot(getMainComponent());
-		final FileDialog fd = new FileDialog(frame, "Save (and load) Excel File", FileDialog.SAVE);
-
-		fd.setFile(filename);
-
-		fd.setLocation(50, 50);
-		fd.setVisible(true);
-		final String savedFileName = fd.getFile();
-
-		if (savedFileName == null) {
-			return null;
-		} else {
-			String path = createFullPath(fd);
-			return path;
-		}
-	}
-
-	private String escape(Object cell) {
-		return cell.toString().replace(LINE_BREAK, " ").replace(CELL_BREAK, " ");
-	}
-
-	private String createFullPath(final FileDialog fd) {
-		String filename = fd.getFile();
-		return fd.getDirectory() + filename;
-	}
-
-	private Date weekOfYearToDate(int weekOfYear, int dayOfWeek, int year, TimeZone timeZone) {
+	/**
+	 * Converts the given week of the year, day of the week and year to a Date.
+	 * 
+	 * @param weekOfYear The week of the year
+	 * @param dayOfWeek  The day of the week
+	 * @param year       The year
+	 * @param timeZone   The time zone
+	 * @return The date created from the given parameters
+	 */
+	private static Date weekOfYearToDate(int weekOfYear, int dayOfWeek, int year, TimeZone timeZone) {
 		Calendar calendar = new GregorianCalendar();
 		calendar.set(Calendar.DAY_OF_WEEK, dayOfWeek);
 		calendar.set(Calendar.WEEK_OF_YEAR, weekOfYear);
@@ -264,7 +350,13 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		return calendar.getTime();
 	}
 
-	private int getQuarterStartWeekForAWeek(int weekOfYear) {
+	/**
+	 * Returns the first week of a quarter from a random week in this quarter.
+	 * 
+	 * @param weekOfYear A random week in a quarter
+	 * @return The first week of the quarter
+	 */
+	private static int getQuarterStartWeekForAWeek(int weekOfYear) {
 		int quarter = weekOfYear / 13;
 		if (quarter < 2) {
 			return quarter * 13 + 2;
@@ -273,7 +365,13 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		}
 	}
 
-	private int getQuarterEndWeekForAWeek(int weekOfYear) {
+	/**
+	 * Returns the last week of a quarter from a random week in this quarter.
+	 * 
+	 * @param weekOfYear A random week in a quarter
+	 * @return The last week of the quarter
+	 */
+	private static int getQuarterEndWeekForAWeek(int weekOfYear) {
 		int quarter = weekOfYear / 13;
 		if (quarter < 2) {
 			return quarter * 13 + 13;
@@ -282,7 +380,13 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		}
 	}
 
-	private String getHighestCountKey(Map<String, Integer> map) {
+	/**
+	 * Returns the key with the highest value number in the given map.
+	 * 
+	 * @param map The map for searching the highest number
+	 * @return The key of the highest value number
+	 */
+	private static String getHighestCountKey(Map<String, Integer> map) {
 		Entry<String, Integer> highestEntry = null;
 		for (Entry<String, Integer> entry : map.entrySet()) {
 			if (highestEntry == null) {

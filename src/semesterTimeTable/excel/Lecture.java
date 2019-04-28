@@ -6,7 +6,7 @@ import java.util.Calendar;
  * Class representing a lecture.
  */
 public class Lecture {
-	
+
 	/** Name of the lecture. */
 	private String name;
 
