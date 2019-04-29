@@ -56,7 +56,10 @@ public class LectureWorkbook {
 	/** String representing a line break inside a workbook cell */
 	public final static String LINE_BREAK = "\n";
 
-	/** Object containing style (especially color) configurations from a workbook for the lectures */
+	/**
+	 * Object containing style (especially color) configurations from a workbook for
+	 * the lectures
+	 */
 	private ColorWorkbook colorWorkbook;
 
 	/** Workbook for the lectures */
@@ -252,13 +255,9 @@ public class LectureWorkbook {
 	 * @return true if cell is part of the lecture area, false otherwise
 	 */
 	private boolean isLectureCell(int rowNum, int columnNum) {
-		if ((((rowNum > 2 && rowNum < 49) || (rowNum > 51 && rowNum < 98) || (rowNum > 100 && rowNum < 139))
+		return (((rowNum > 2 && rowNum < 49) || (rowNum > 51 && rowNum < 98) || (rowNum > 100 && rowNum < 139))
 				&& (columnNum > 0 && columnNum != 11 && columnNum < 22))
-				|| ((rowNum > 138 && rowNum < 147) && (columnNum > 0 && columnNum != 11 && columnNum < 16))) {
-			return true;
-		} else {
-			return false;
-		}
+				|| ((rowNum > 138 && rowNum < 147) && (columnNum > 0 && columnNum != 11 && columnNum < 16));
 	}
 
 	/**
@@ -358,54 +357,56 @@ public class LectureWorkbook {
 	 * Creates border styles for each kind of cell.
 	 */
 	private void createBorderStyles() {
+		
+		XSSFWorkbook workbook = this.getWorkbook();
 
 		// leftNoTop middleNoTop rightNoTop
 		// leftGrey middleGrey rightGrey
 		// leftBlack middleBlack rightBlack
 		this.borderStyle = new XSSFCellStyle[3][3];
 
-		this.borderStyle[0][1] = this.getWorkbook().createCellStyle();
+		this.borderStyle[0][1] = workbook.createCellStyle();
 		this.borderStyle[0][1].setBorderLeft(BorderStyle.THIN);
 		this.borderStyle[0][1].setBorderRight(BorderStyle.THIN);
 		this.borderStyle[0][1].setFillForegroundColor(LectureWorkbook.colorToXSSFColor(Color.WHITE));
 		this.borderStyle[0][1].setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
-		this.borderStyle[0][0] = this.getWorkbook().createCellStyle();
+		this.borderStyle[0][0] = workbook.createCellStyle();
 		this.borderStyle[0][0].cloneStyleFrom(this.borderStyle[0][1]);
 		this.borderStyle[0][0].setBorderLeft(BorderStyle.THICK);
 
-		this.borderStyle[0][2] = this.getWorkbook().createCellStyle();
+		this.borderStyle[0][2] = workbook.createCellStyle();
 		this.borderStyle[0][2].cloneStyleFrom(this.borderStyle[0][1]);
 		this.borderStyle[0][2].setBorderRight(BorderStyle.THICK);
 
-		this.borderStyle[2][1] = this.getWorkbook().createCellStyle();
+		this.borderStyle[2][1] = workbook.createCellStyle();
 		this.borderStyle[2][1].cloneStyleFrom(this.borderStyle[0][1]);
 		this.borderStyle[2][1].setBorderTop(BorderStyle.THIN);
 
-		this.borderStyle[2][0] = this.getWorkbook().createCellStyle();
+		this.borderStyle[2][0] = workbook.createCellStyle();
 		this.borderStyle[2][0].cloneStyleFrom(this.borderStyle[2][1]);
 		this.borderStyle[2][0].setBorderLeft(BorderStyle.THICK);
 
-		this.borderStyle[2][2] = this.getWorkbook().createCellStyle();
+		this.borderStyle[2][2] = workbook.createCellStyle();
 		this.borderStyle[2][2].cloneStyleFrom(this.borderStyle[2][1]);
 		this.borderStyle[2][2].setBorderRight(BorderStyle.THICK);
 
-		this.borderStyle[1][1] = this.getWorkbook().createCellStyle();
+		this.borderStyle[1][1] = workbook.createCellStyle();
 		this.borderStyle[1][1].cloneStyleFrom(this.borderStyle[2][1]);
 		this.borderStyle[1][1].setTopBorderColor(colorToXSSFColor(Color.LIGHT_GRAY));
 
-		this.borderStyle[1][0] = this.getWorkbook().createCellStyle();
+		this.borderStyle[1][0] = workbook.createCellStyle();
 		this.borderStyle[1][0].cloneStyleFrom(this.borderStyle[1][1]);
 		this.borderStyle[1][0].setBorderLeft(BorderStyle.THICK);
 
-		this.borderStyle[1][2] = this.getWorkbook().createCellStyle();
+		this.borderStyle[1][2] = workbook.createCellStyle();
 		this.borderStyle[1][2].cloneStyleFrom(this.borderStyle[1][1]);
 		this.borderStyle[1][2].setBorderRight(BorderStyle.THICK);
 
 		this.borderStyleExamWeek = new XSSFCellStyle[3][3];
 		for (int kindOfRow = 0; kindOfRow < 3; kindOfRow++) {
 			for (int kindOfColumn = 0; kindOfColumn < 3; kindOfColumn++) {
-				this.borderStyleExamWeek[kindOfRow][kindOfColumn] = this.getWorkbook().createCellStyle();
+				this.borderStyleExamWeek[kindOfRow][kindOfColumn] = workbook.createCellStyle();
 				this.borderStyleExamWeek[kindOfRow][kindOfColumn]
 						.cloneStyleFrom(this.borderStyle[kindOfRow][kindOfColumn]);
 				this.borderStyleExamWeek[kindOfRow][kindOfColumn].setFillForegroundColor(colorToXSSFColor(Color.CYAN));
