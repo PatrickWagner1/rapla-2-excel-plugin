@@ -1,10 +1,8 @@
 package semesterTimeTable.excel;
 
 import java.awt.Color;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -14,9 +12,9 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -357,7 +355,7 @@ public class LectureWorkbook {
 	 * Creates border styles for each kind of cell.
 	 */
 	private void createBorderStyles() {
-		
+
 		XSSFWorkbook workbook = this.getWorkbook();
 
 		// leftNoTop middleNoTop rightNoTop
@@ -566,7 +564,7 @@ public class LectureWorkbook {
 	 */
 	public void saveToFile(String filename) throws IOException {
 		File file = new File(filename);
-		LectureWorkbook.saveWorkbookToFile(this.getWorkbook(), file);
+		ApachePOIWrapper.saveWorkbookToFile(this.getWorkbook(), file);
 		this.getWorkbook().close();
 	}
 
@@ -971,34 +969,6 @@ public class LectureWorkbook {
 		FileInputStream excelFile = new FileInputStream(file);
 		XSSFWorkbook workbook = new XSSFWorkbook(excelFile);
 		return workbook;
-	}
-
-	/**
-	 * Saves the given workbook to the given file.
-	 * 
-	 * @param workbook The workbook to save
-	 * @param file     The file for saving the workbook
-	 * @throws IOException If saving the workbook in the file failed
-	 */
-	public static void saveWorkbookToFile(XSSFWorkbook workbook, File file) throws IOException {
-		ByteArrayOutputStream stream = new ByteArrayOutputStream();
-		workbook.write(stream);
-		byte[] content = stream.toByteArray();
-		LectureWorkbook.writeFile(file, content);
-	}
-
-	/**
-	 * Saves the given content to the given file.
-	 * 
-	 * @param file    The file for saving the content
-	 * @param content The content to save
-	 * @throws IOException If saving the content in the file failed
-	 */
-	public static void writeFile(File file, byte[] content) throws IOException {
-		FileOutputStream out = new FileOutputStream(file);
-		out.write(content);
-		out.flush();
-		out.close();
 	}
 
 	/**

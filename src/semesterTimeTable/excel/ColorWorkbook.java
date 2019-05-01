@@ -213,7 +213,7 @@ public class ColorWorkbook {
 				}
 			}
 		}
-		LectureWorkbook.saveWorkbookToFile(workbook, file);
+		ApachePOIWrapper.saveWorkbookToFile(workbook, file);
 		this.initColorWorkbook(workbook);
 	}
 
