@@ -11,6 +11,7 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -42,11 +43,14 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 public class LectureWorkbook {
 
 	/** List of normal start times of a lecture */
-	public final static List<String> START_TIMES = new ArrayList<String>(Arrays.asList("08:00", "08:45", "09:45",
-			"10:30", "11:30", "12:15", "14:00", "14:45", "15:45", "16:30", "17:30", "18:15"));
+	public final static List<String> START_TIMES = new ArrayList<String>(Arrays.asList("00:00", "08:00", "08:45",
+			"09:45", "10:30", "11:30", "12:15", "14:00", "14:45", "15:45", "16:30", "17:30", "18:15"));
 	/** List of normal end times of a lecture */
-	public final static List<String> END_TIMES = new ArrayList<String>(Arrays.asList("08:45", "09:30", "10:30", "11:15",
-			"12:15", "13:00", "14:45", "15:30", "16:30", "17:15", "18:15", "19:00"));
+	public final static List<String> END_TIMES = new ArrayList<String>(Arrays.asList("00:00", "08:45", "09:30", "10:30",
+			"11:15", "12:15", "13:00", "14:45", "15:30", "16:30", "17:15", "18:15", "19:00"));
+
+	/** Group name of all holidays */
+	public final static String HOLIDAY = "holiday";
 
 	/** Name of the template workbook file */
 	private final static String TEMPLATE_FILENAME = "template.xlsx";
@@ -63,8 +67,11 @@ public class LectureWorkbook {
 	/** Workbook for the lectures */
 	private XSSFWorkbook workbook;
 
-	/** Start date of the quarter */
+	/** Included start date of the quarter */
 	private Calendar quarterStartDate;
+
+	/** Excluded end date of the quarter */
+	private Calendar quarterEndDate;
 
 	/** Map of lectures grouped by their names */
 	private Map<String, List<Lecture>> groupedLectures;
@@ -131,11 +138,17 @@ public class LectureWorkbook {
 	 * colorWorkbook.
 	 * 
 	 * @param filename         The path to the workbook file
-	 * @param quarterStartDate The first date in a quarter (should always be Monday)
+	 * @param quarterStartDate The first included date in a quarter (should always
+	 *                         be Monday)
+	 * @param quarterEndDate   The last excluded date in a quarter (should always be
+	 *                         Saturday)
 	 * @param lectures         A list of lectures to be added to the workbook
 	 * @throws IOException If reading one workbook file failed
 	 */
-	public LectureWorkbook(String filename, Calendar quarterStartDate, List<Lecture> lectures) throws IOException {
+	public LectureWorkbook(String filename, Calendar quarterStartDate, Calendar quarterEndDate, List<Lecture> lectures)
+			throws IOException {
+		this.quarterStartDate = quarterStartDate;
+		this.quarterEndDate = quarterEndDate;
 		File file = new File(filename);
 		if (file.exists()) {
 			this.setWorkbook(LectureWorkbook.loadWorkbookFromFile(file));
@@ -147,7 +160,7 @@ public class LectureWorkbook {
 		this.createBorderStyles();
 		this.setGroupedLectures(lectures);
 		this.setColorWorkbook(new ColorWorkbook(file.getParent(), this.getLectures()));
-		this.setQuarterStartDate(quarterStartDate);
+		this.resetWorkbook();
 	}
 
 	/**
@@ -240,7 +253,7 @@ public class LectureWorkbook {
 
 		this.addLecturesToWorkbook();
 
-		sheet.getRow(2).getCell(1).setCellValue(this.quarterStartDate);
+		sheet.getRow(2).getCell(1).setCellValue(this.getQuarterStartDate());
 		sheet.getRow(1).getCell(0).setCellValue(new GregorianCalendar());
 		XSSFFormulaEvaluator.evaluateAllFormulaCells(this.getWorkbook());
 	}
@@ -489,23 +502,36 @@ public class LectureWorkbook {
 	}
 
 	/**
-	 * Returns the start date of the quarter. It can cause layout errors in the
-	 * workbook, if the day of the date is not a Monday.
+	 * Returns the included start date of the quarter. It can cause layout errors in
+	 * the workbook, if the day of the date is not a Monday.
 	 * 
-	 * @return The start date of the quarter
+	 * @return The included start date of the quarter
 	 */
 	public Calendar getQuarterStartDate() {
 		return this.quarterStartDate;
 	}
 
 	/**
+	 * REturns the excluded end date of the quarter. It can cause layout errors in
+	 * the workbook, if the day of the date is not a Saturday.
+	 * 
+	 * @return The excluded end date of the quarter
+	 */
+	public Calendar getQuarterEndDate() {
+		return this.quarterEndDate;
+	}
+
+	/**
 	 * Sets the start date of the quarter. It can cause layout errors in the
 	 * workbook, if the day of the date is not a Monday.
 	 * 
-	 * @param quarterStartDate The start date of the quarter
+	 * @param quarterStartDate The included start date of the quarter
+	 * @param quarterEndDate   The excluded end date of the quarter
 	 */
-	public void setQuarterStartDate(Calendar quarterStartDate) {
+	public void setQuarterBorderDates(Calendar quarterStartDate, Calendar quarterEndDate) {
 		this.quarterStartDate = quarterStartDate;
+		this.quarterEndDate = quarterEndDate;
+		this.addHolidays();
 		this.resetWorkbook();
 	}
 
@@ -533,6 +559,7 @@ public class LectureWorkbook {
 	private void setGroupedLectures(List<Lecture> lectures) {
 		this.groupedLectures = new TreeMap<String, List<Lecture>>(
 				lectures.stream().collect(Collectors.groupingBy(Lecture::getName)));
+		this.addHolidays();
 	}
 
 	/**
@@ -580,7 +607,7 @@ public class LectureWorkbook {
 		List<Lecture> groupedLectureList;
 		String groupedLectureName;
 
-		for (Entry<String, List<Lecture>> groupedLecture : this.groupedLectures.entrySet()) {
+		for (Entry<String, List<Lecture>> groupedLecture : this.getGroupedLectures().entrySet()) {
 			groupedLectureList = groupedLecture.getValue();
 			groupedLectureName = groupedLecture.getKey();
 
@@ -630,7 +657,7 @@ public class LectureWorkbook {
 			Map<XSSFFont, Integer[]> lectureNameFonts, Lecture lecture) {
 		boolean mergedSuccessful;
 		boolean addedSuccessful = false;
-		CellRangeAddress cellRange = getCellRangeFromLecture(this.quarterStartDate, lecture);
+		CellRangeAddress cellRange = getCellRangeFromLecture(this.getQuarterStartDate(), lecture);
 		XSSFSheet sheet = this.getSheet();
 		try {
 			sheet.addMergedRegion(cellRange);
@@ -650,6 +677,31 @@ public class LectureWorkbook {
 		}
 
 		return addedSuccessful;
+	}
+
+	/**
+	 * Adds all holidays between the start and end quarter date to the grouped
+	 * lectures with {@value LectureWorkbook#HOLIDAY} as key for all holidays. The
+	 * lectures for the holidays do not have any resources or lecturers. Each
+	 * lecture for a holiday will start at 00:00:00.001 and ends at 00:00:00.000 on
+	 * the next day.
+	 */
+	private void addHolidays() {
+		Calendar quarterIncludedEndDate = (Calendar) this.getQuarterEndDate().clone();
+		quarterIncludedEndDate.add(Calendar.DAY_OF_MONTH, -1);
+		Map<Calendar, String> holidays = Holidays.getHolidays(this.getQuarterStartDate(), quarterIncludedEndDate,
+				new Locale("de", "de", "bw"));
+		List<Lecture> holidaysLecture = new ArrayList<Lecture>();
+		for (Entry<Calendar, String> holiday : holidays.entrySet()) {
+			Calendar startDate = holiday.getKey();
+			startDate.setTimeZone(this.getQuarterStartDate().getTimeZone());
+			Calendar endDate = (Calendar) startDate.clone();
+			startDate.add(Calendar.MILLISECOND, 1);
+			endDate.add(Calendar.DAY_OF_MONTH, 1);
+			Lecture lecture = new Lecture(holiday.getValue(), startDate, endDate, "", "");
+			holidaysLecture.add(lecture);
+		}
+		this.getGroupedLectures().put(LectureWorkbook.HOLIDAY, holidaysLecture);
 	}
 
 	/**
@@ -887,11 +939,15 @@ public class LectureWorkbook {
 	public static CellAddress getCellAddressFromDate(Calendar quarterStartDate, Calendar lectureDate,
 			boolean isLectureEnd) {
 		CellAddress cellAddress;
-		int lectureDateOfWeek = lectureDate.get(Calendar.DAY_OF_WEEK);
+		Calendar date = (Calendar) lectureDate.clone();
+		if (isLectureEnd) {
+			date.add(Calendar.MINUTE, -1);
+		}
+		int lectureDayOfWeek = date.get(Calendar.DAY_OF_WEEK);
 
-		int daysBetween = (int) ChronoUnit.DAYS.between(quarterStartDate.toInstant(), lectureDate.toInstant());
+		int daysBetween = (int) ChronoUnit.DAYS.between(quarterStartDate.toInstant(), date.toInstant());
 
-		if (lectureDateOfWeek == Calendar.SUNDAY || lectureDateOfWeek == Calendar.SATURDAY || daysBetween > 81) {
+		if (lectureDayOfWeek == Calendar.SUNDAY || lectureDayOfWeek == Calendar.SATURDAY || daysBetween > 81) {
 			cellAddress = null;
 		} else {
 			int columnNum = daysBetween % 28;
@@ -900,17 +956,8 @@ public class LectureWorkbook {
 
 			int rowNum = daysBetween / 28 * 49 + 4;
 
-			int minutes = lectureDate.get(Calendar.MINUTE);
-			int hours = lectureDate.get(Calendar.HOUR_OF_DAY);
-			if (isLectureEnd) {
-				if (minutes == 0) {
-					minutes = 59;
-					hours--;
-
-				} else {
-					minutes--;
-				}
-			}
+			int minutes = date.get(Calendar.MINUTE);
+			int hours = date.get(Calendar.HOUR_OF_DAY);
 			int timePosition = ((hours - 8) * 4) + (minutes / 15);
 
 			if (timePosition < 0) {

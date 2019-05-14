@@ -197,9 +197,9 @@ public class ColorWorkbook {
 		String removePrefix = ColorWorkbook.REMOVE_PREFIX + " ";
 		String ignorePrefix = ColorWorkbook.IGNORE_PREFIX + " ";
 		String rawLectureName;
-		int rowNum = 3;
+		int rowNum = 4;
 		for (String lectureName : lectureNames) {
-			if (!lectureName.startsWith(removePrefix)) {
+			if (!lectureName.startsWith(removePrefix) && !lectureName.equals(LectureWorkbook.HOLIDAY)) {
 				rawLectureName = lectureName.startsWith(ignorePrefix) ? lectureName.substring(ignorePrefix.length())
 						: lectureName;
 

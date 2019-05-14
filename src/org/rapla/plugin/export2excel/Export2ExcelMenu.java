@@ -125,14 +125,20 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 
 		List<Lecture> lectures = this.raplaObjectsToLectures(objects, columns);
 
+		TimeZone timeZone = getRaplaLocale().getTimeZone();
+
 		Calendar quarterStartDate = new GregorianCalendar();
 		quarterStartDate.setTime(model.getStartDate());
-		quarterStartDate.setTimeZone(getRaplaLocale().getTimeZone());
+		quarterStartDate.setTimeZone(timeZone);
+
+		Calendar quarterEndDate = new GregorianCalendar();
+		quarterEndDate.setTime(model.getEndDate());
+		quarterEndDate.setTimeZone(timeZone);
 
 		String filename = this.getDefaultFileName();
 		String path = loadFile(filename);
 		if (path != null) {
-			saveFile(path, quarterStartDate, lectures);
+			saveFile(path, quarterStartDate, quarterEndDate, lectures);
 			exportFinished(getMainComponent());
 		}
 	}
@@ -163,13 +169,15 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	 * lectures. Otherwise the standard template workbook is used.
 	 * 
 	 * @param filename         The name for the file
-	 * @param quarterStartDate The start date of the quarter
+	 * @param quarterStartDate The included start date of the quarter
+	 * @param quarterEndDate   The excluded end date of the quarter
 	 * @param lectures         a list of lectures
 	 * @throws RaplaException If loading or saving the file fails
 	 */
-	public void saveFile(String filename, Calendar quarterStartDate, List<Lecture> lectures) throws RaplaException {
+	public void saveFile(String filename, Calendar quarterStartDate, Calendar quarterEndDate, List<Lecture> lectures)
+			throws RaplaException {
 		try {
-			LectureWorkbook excelGenerator = new LectureWorkbook(filename, quarterStartDate, lectures);
+			LectureWorkbook excelGenerator = new LectureWorkbook(filename, quarterStartDate, quarterEndDate, lectures);
 			excelGenerator.saveToFile(filename);
 		} catch (IOException e) {
 			throw new RaplaException(e.getMessage(), e);
@@ -347,6 +355,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
 		calendar.set(Calendar.MINUTE, 0);
 		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MILLISECOND, 0);
 		return calendar.getTime();
 	}
 
