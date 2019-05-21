@@ -10,7 +10,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 /**
  * Wrapper class for the Apache POI library.
  */
-public final class ApachePOIWrapper implements IApachePOIWrapper {
+public final class ApachePOIWrapper {
 
 	/**
 	 * Saves the given workbook to the given file.
