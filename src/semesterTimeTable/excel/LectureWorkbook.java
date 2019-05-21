@@ -11,10 +11,10 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,7 +32,6 @@ import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFRichTextString;
-import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -62,7 +61,7 @@ public class LectureWorkbook {
 	 * Object containing style (especially color) configurations from a workbook for
 	 * the lectures
 	 */
-	private ColorWorkbook colorWorkbook;
+	private ConfigWorkbook configWorkbook;
 
 	/** Workbook for the lectures */
 	private XSSFWorkbook workbook;
@@ -137,19 +136,12 @@ public class LectureWorkbook {
 	 * colorMap.xlsx in the directory of the file, it will be loaded as custom
 	 * colorWorkbook.
 	 * 
-	 * @param filename         The path to the workbook file
-	 * @param quarterStartDate The first included date in a quarter (should always
-	 *                         be Monday)
-	 * @param quarterEndDate   The last excluded date in a quarter (should always be
-	 *                         Saturday)
-	 * @param lectures         A list of lectures to be added to the workbook
+	 * @param filename The path to the workbook file
 	 * @throws IOException If reading one workbook file failed
 	 */
-	public LectureWorkbook(String filename, Calendar quarterStartDate, Calendar quarterEndDate, List<Lecture> lectures)
-			throws IOException {
-		this.quarterStartDate = quarterStartDate;
-		this.quarterEndDate = quarterEndDate;
+	public LectureWorkbook(String filename) throws IOException {
 		File file = new File(filename);
+		this.setConfigWorkbook(new ConfigWorkbook(file.getParent()));
 		if (file.exists()) {
 			this.setWorkbook(LectureWorkbook.loadWorkbookFromFile(file));
 		} else {
@@ -158,9 +150,10 @@ public class LectureWorkbook {
 		}
 		this.setBorderLists();
 		this.createBorderStyles();
-		this.setGroupedLectures(lectures);
-		this.setColorWorkbook(new ColorWorkbook(file.getParent(), this.getLectures()));
-		this.resetWorkbook();
+		Calendar quarterStartDate = this.getConfigWorkbook().getQuarterStartDate();
+		if (quarterStartDate != null) {
+			this.setBorderDatesWithDateInFirstWeek(quarterStartDate);
+		}
 	}
 
 	/**
@@ -194,8 +187,8 @@ public class LectureWorkbook {
 	 * 
 	 * @return The color workbook
 	 */
-	public ColorWorkbook getColorWorkbook() {
-		return this.colorWorkbook;
+	public ConfigWorkbook getConfigWorkbook() {
+		return this.configWorkbook;
 	}
 
 	/**
@@ -203,8 +196,8 @@ public class LectureWorkbook {
 	 * 
 	 * @param colorWorkbook The workbook with the color styles
 	 */
-	private void setColorWorkbook(ColorWorkbook colorWorkbook) {
-		this.colorWorkbook = colorWorkbook;
+	private void setConfigWorkbook(ConfigWorkbook colorWorkbook) {
+		this.configWorkbook = colorWorkbook;
 	}
 
 	/**
@@ -239,8 +232,8 @@ public class LectureWorkbook {
 	 * Deletes all lectures in the workbook and insert the lectures from
 	 * groupedLectures into the workbook.
 	 */
-	public void resetWorkbook() {
-		XSSFSheet sheet = this.workbook.getSheetAt(0);
+	public void fillWorkbook() {
+		XSSFSheet sheet = this.getSheet();
 		List<CellRangeAddress> ranges = sheet.getMergedRegions();
 		for (int index = sheet.getNumMergedRegions() - 1; index > -1; index--) {
 			CellRangeAddress range = ranges.get(index);
@@ -521,18 +514,25 @@ public class LectureWorkbook {
 		return this.quarterEndDate;
 	}
 
-	/**
-	 * Sets the start date of the quarter. It can cause layout errors in the
-	 * workbook, if the day of the date is not a Monday.
-	 * 
-	 * @param quarterStartDate The included start date of the quarter
-	 * @param quarterEndDate   The excluded end date of the quarter
-	 */
-	public void setQuarterBorderDates(Calendar quarterStartDate, Calendar quarterEndDate) {
-		this.quarterStartDate = quarterStartDate;
-		this.quarterEndDate = quarterEndDate;
+	private void setBorderDates(int weekOfYear, int year, TimeZone timeZone) {
+		this.quarterStartDate = LectureWorkbook.weekOfYearToDate(weekOfYear, Calendar.MONDAY, year, timeZone);
+		this.quarterEndDate = LectureWorkbook.weekOfYearToDate(weekOfYear + 11, Calendar.SATURDAY, year, timeZone);
 		this.addHolidays();
-		this.resetWorkbook();
+	}
+
+	public void setBorderDatesWithDateInFirstWeek(Calendar date) {
+		this.setBorderDates(date.get(Calendar.WEEK_OF_YEAR), date.get(Calendar.YEAR), date.getTimeZone());
+	}
+
+	public void setBorderDatesWithDateInQuarter(Calendar date) {
+		int[] quarterStartWeeks = this.getConfigWorkbook().getQuarterStartWeeks();
+		int week = date.get(Calendar.WEEK_OF_YEAR);
+		for (int quarterStartWeek : quarterStartWeeks) {
+			if (week >= quarterStartWeek && week < quarterStartWeek + 13) {
+				this.setBorderDates(quarterStartWeek, date.get(Calendar.YEAR), date.getTimeZone());
+				break;
+			}
+		}
 	}
 
 	/**
@@ -548,15 +548,10 @@ public class LectureWorkbook {
 	 * Sets the grouped lectures by grouping the given lecture list without. This
 	 * method only sets the grouped lectures and do not change the workbook.
 	 * 
-	 * The workbook data and the grouped lecture data will not be consistent after
-	 * using this method. You can use for this the {@link #setLectures(List)} method
-	 * instead.
-	 * 
-	 * @see #setLectures(List)
-	 * 
 	 * @param lectures A list of lectures
+	 * @throws IOException
 	 */
-	private void setGroupedLectures(List<Lecture> lectures) {
+	public void setLectures(List<Lecture> lectures) throws IOException {
 		this.groupedLectures = new TreeMap<String, List<Lecture>>(
 				lectures.stream().collect(Collectors.groupingBy(Lecture::getName)));
 		this.addHolidays();
@@ -574,22 +569,18 @@ public class LectureWorkbook {
 	}
 
 	/**
-	 * Sets the grouped lectures and add them to the workbook.
-	 * 
-	 * @param lectures A list of lectures
-	 */
-	public void setLectures(List<Lecture> lectures) {
-		this.setGroupedLectures(lectures);
-		this.resetWorkbook();
-	}
-
-	/**
 	 * Saves the workbook as an xlsx file with the given filename.
 	 * 
 	 * @param filename The name for the xlsx file
 	 * @throws IOException If saving the workbook failed
 	 */
 	public void saveToFile(String filename) throws IOException {
+		ConfigWorkbook configWorkbook = this.getConfigWorkbook();
+		if (configWorkbook.isNewConfig()) {
+			configWorkbook.addLectureNames(this.getLectures());
+		}
+		configWorkbook.close();
+		this.fillWorkbook();
 		File file = new File(filename);
 		ApachePOIWrapper.saveWorkbookToFile(this.getWorkbook(), file);
 		this.getWorkbook().close();
@@ -600,9 +591,10 @@ public class LectureWorkbook {
 	 * of the workbook sheet.
 	 */
 	private void addLecturesToWorkbook() {
-		Map<String, XSSFColor[]> colorPairs = colorWorkbook.getColorPairs();
-		Map<String, XSSFFont> highlightedFonts = colorWorkbook.getHighlightedFonts();
-		String[] ignorePrefixes = colorWorkbook.getIgnorePrefixes();
+		ConfigWorkbook configWorkbook = this.getConfigWorkbook();
+		Map<String, LectureProperties> lecturePropertiesMap = configWorkbook.getLecturePropertiesMap();
+		Map<String, XSSFFont> highlightedFonts = configWorkbook.getHighlightedFonts();
+		String[] ignorePrefixes = configWorkbook.getIgnorePrefixes();
 
 		List<Lecture> groupedLectureList;
 		String groupedLectureName;
@@ -615,7 +607,8 @@ public class LectureWorkbook {
 					highlightedFonts);
 
 			String rawLectureName = LectureWorkbook.removePrefixFromString(groupedLectureName, ignorePrefixes);
-			XSSFColor[] colorPair = LectureWorkbook.getColorPairFromMap(rawLectureName, colorPairs);
+			LectureProperties lectureProperties = LectureWorkbook.getLecturePropertiesFromMap(rawLectureName,
+					lecturePropertiesMap);
 
 			XSSFColor fontColor = null;
 			XSSFFont mainFont = new XSSFFont();
@@ -626,15 +619,18 @@ public class LectureWorkbook {
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			cellStyle.setWrapText(true);
 			cellStyle.setVerticalAlignment(VerticalAlignment.TOP);
-			if (colorPair != null) {
-				fontColor = colorPair[0];
-				cellStyle.setFillForegroundColor(colorPair[1]);
+			String shortLectureName = "";
+			if (lectureProperties != null) {
+				fontColor = lectureProperties.getFontColor();
+				cellStyle.setFillForegroundColor(lectureProperties.getFillColor());
+				shortLectureName = lectureProperties.getShortLectureName();
 			} else {
 				cellStyle.setFillForegroundColor(LectureWorkbook.colorToXSSFColor(Color.WHITE));
 			}
 			mainFont.setColor(fontColor);
 
 			for (Lecture lecture : groupedLectureList) {
+				lecture.setShortName(shortLectureName);
 				this.addLectureToWorkbook(cellStyle, mainFont, lectureNameFonts, lecture);
 			}
 		}
@@ -655,25 +651,27 @@ public class LectureWorkbook {
 	 */
 	private boolean addLectureToWorkbook(XSSFCellStyle cellStyle, XSSFFont mainFont,
 			Map<XSSFFont, Integer[]> lectureNameFonts, Lecture lecture) {
-		boolean mergedSuccessful;
+		boolean mergedSuccessful = false;
 		boolean addedSuccessful = false;
 		CellRangeAddress cellRange = getCellRangeFromLecture(this.getQuarterStartDate(), lecture);
 		XSSFSheet sheet = this.getSheet();
-		try {
-			sheet.addMergedRegion(cellRange);
-			mergedSuccessful = true;
-		} catch (IllegalStateException e) {
+		if (cellRange != null) {
+			try {
+				sheet.addMergedRegion(cellRange);
+				mergedSuccessful = true;
+			} catch (IllegalStateException e) {
 
-			// TODO parallel lecture handling
-			mergedSuccessful = false;
-			System.err.println("skipped lecture: " + lecture.getName() + " at " + lecture.getStartDate() + " - "
-					+ lecture.getEndDate());
+				// TODO parallel lecture handling
+				System.err.println("skipped lecture: " + lecture.getName() + " at " + lecture.getStartDate() + " - "
+						+ lecture.getEndDate());
+			}
 		}
 
 		if (mergedSuccessful) {
 			XSSFCell cell = sheet.getRow(cellRange.getFirstRow()).getCell(cellRange.getFirstColumn());
 			cell.setCellValue(lectureToRichText(mainFont, lectureNameFonts, lecture));
 			cell.setCellStyle(cellStyle);
+			addedSuccessful = true;
 		}
 
 		return addedSuccessful;
@@ -687,21 +685,26 @@ public class LectureWorkbook {
 	 * the next day.
 	 */
 	private void addHolidays() {
-		Calendar quarterIncludedEndDate = (Calendar) this.getQuarterEndDate().clone();
-		quarterIncludedEndDate.add(Calendar.DAY_OF_MONTH, -1);
-		Map<Calendar, String> holidays = Holidays.getHolidays(this.getQuarterStartDate(), quarterIncludedEndDate,
-				new Locale("de", "de", "bw"));
-		List<Lecture> holidaysLecture = new ArrayList<Lecture>();
-		for (Entry<Calendar, String> holiday : holidays.entrySet()) {
-			Calendar startDate = holiday.getKey();
-			startDate.setTimeZone(this.getQuarterStartDate().getTimeZone());
-			Calendar endDate = (Calendar) startDate.clone();
-			startDate.add(Calendar.MILLISECOND, 1);
-			endDate.add(Calendar.DAY_OF_MONTH, 1);
-			Lecture lecture = new Lecture(holiday.getValue(), startDate, endDate, "", "");
-			holidaysLecture.add(lecture);
+		Calendar quarterStartDate = this.getQuarterStartDate();
+		Calendar quarterEndDate = this.getQuarterEndDate();
+		Map<String, List<Lecture>> groupedLectures = this.getGroupedLectures();
+		if (quarterStartDate != null && quarterEndDate != null && groupedLectures != null) {
+			Calendar quarterIncludedEndDate = (Calendar) quarterEndDate.clone();
+			quarterIncludedEndDate.add(Calendar.DAY_OF_MONTH, -1);
+			Map<Calendar, String> holidays = Holidays.getHolidays(quarterStartDate, quarterIncludedEndDate,
+					this.getConfigWorkbook().getHolidayLocale());
+			List<Lecture> holidaysLecture = new ArrayList<Lecture>();
+			for (Entry<Calendar, String> holiday : holidays.entrySet()) {
+				Calendar startDate = holiday.getKey();
+				startDate.setTimeZone(quarterStartDate.getTimeZone());
+				Calendar endDate = (Calendar) startDate.clone();
+				startDate.add(Calendar.MILLISECOND, 1);
+				endDate.add(Calendar.DAY_OF_MONTH, 1);
+				Lecture lecture = new Lecture(holiday.getValue(), startDate, endDate, "", "");
+				holidaysLecture.add(lecture);
+			}
+			groupedLectures.put(LectureWorkbook.HOLIDAY, holidaysLecture);
 		}
-		this.getGroupedLectures().put(LectureWorkbook.HOLIDAY, holidaysLecture);
 	}
 
 	/**
@@ -715,9 +718,10 @@ public class LectureWorkbook {
 	 */
 	private static XSSFRichTextString lectureToRichText(XSSFFont mainFont, Map<XSSFFont, Integer[]> lectureNameFonts,
 			Lecture lecture) {
-		String text = lecture.getName() + LectureWorkbook.LINE_BREAK
-				+ LectureWorkbook.arrayToString(lecture.getResources()) + LectureWorkbook.LINE_BREAK
-				+ LectureWorkbook.arrayToString(lecture.getLecturers());
+		String shortLectureName = lecture.getShortName();
+		String text = shortLectureName != null && shortLectureName != "" ? shortLectureName : lecture.getName();
+		text += LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getResources())
+				+ LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getLecturers());
 		if (!LectureWorkbook.hasLectureNormalTimeInterval(lecture)) {
 			String startTime = LectureWorkbook.getTime(lecture.getStartDate());
 			String endTime = LectureWorkbook.getTime(lecture.getEndDate());
@@ -733,112 +737,27 @@ public class LectureWorkbook {
 	}
 
 	/**
-	 * Returns a map of color pairs from a cell range. All cells with a value in the
-	 * cell range will be added to the map with their color pair. A color pair is an
-	 * array with to values. The first value is the font color of the cell and the
-	 * second value is the fill color of the cell.
-	 * 
-	 * @param sheet     The sheet, which will be scanned
-	 * @param cellRange The cell range, which will be scanned
-	 * @return A map of cell values and color array pairs (array always and only
-	 *         contains font color and fill color)
-	 */
-	public static Map<String, XSSFColor[]> getMappedColorPairs(XSSFSheet sheet, CellRangeAddress cellRange) {
-		Map<String, XSSFColor[]> colorMap = new HashMap<String, XSSFColor[]>();
-		for (int rowNum = cellRange.getFirstColumn(); rowNum <= cellRange.getLastRow(); rowNum++) {
-			XSSFRow row = sheet.getRow(rowNum);
-			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
-				XSSFCell cell = row.getCell(columnNum);
-				if (cell != null) {
-					String key = cell.getStringCellValue();
-					if (key != null && key != "") {
-						XSSFCellStyle cellStyle = cell.getCellStyle();
-						XSSFColor fillColor = cellStyle.getFillForegroundColorColor();
-						fillColor = fillColor == null ? cellStyle.getFillBackgroundColorColor() : fillColor;
-						XSSFColor[] colorPair = new XSSFColor[] { cellStyle.getFont().getXSSFColor(), fillColor };
-						colorMap.put(key, colorPair);
-					}
-				}
-			}
-		}
-		return colorMap;
-	}
-
-	/**
-	 * Returns a map of font colors from a cell range. All cells with a value in the
-	 * cell range will be added to the map with their font color.
-	 * 
-	 * @param sheet     The sheet, which will be scanned
-	 * @param cellRange The cell range, which will be scanned
-	 * @return A map of cell values and font color pairs
-	 */
-	public static Map<String, XSSFFont> getMappedFontColor(XSSFSheet sheet, CellRangeAddress cellRange) {
-		Map<String, XSSFFont> fontMap = new HashMap<String, XSSFFont>();
-		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {
-			XSSFRow row = sheet.getRow(rowNum);
-			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
-				XSSFCell cell = row.getCell(columnNum);
-				if (cell != null) {
-					String key = cell.getStringCellValue();
-					if (key != null && key != "") {
-						XSSFFont font = new XSSFFont();
-						font.setFontHeight((short) 200);
-						font.setFontName("Arial");
-						font.setColor(cell.getCellStyle().getFont().getXSSFColor());
-						fontMap.put(key, font);
-					}
-				}
-			}
-
-		}
-		return fontMap;
-	}
-
-	/**
-	 * Returns an array of all values from a cell range. Cells with no value will
-	 * not be added to the array.
-	 * 
-	 * @param sheet     The sheet, which will be scanned
-	 * @param cellRange The cell range, which will be scanned
-	 * @return An array of cell values
-	 */
-	public static String[] getValuesFromWorkbook(XSSFSheet sheet, CellRangeAddress cellRange) {
-		List<String> valueList = new ArrayList<String>();
-		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {
-			XSSFRow row = sheet.getRow(rowNum);
-			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
-				XSSFCell cell = row.getCell(columnNum);
-				if (cell != null) {
-					String value = cell.getStringCellValue();
-					if (value != null && value != "") {
-						valueList.add(value);
-					}
-				}
-			}
-		}
-		return valueList.toArray(new String[valueList.size()]);
-	}
-
-	/**
 	 * Returns the color array of the given name from the color map. If the name
 	 * does not match a color map key, then null is returned.
 	 *
 	 * The name can contain a '*' as a wildcard.
 	 * 
-	 * @param name     The name for matching a key
-	 * @param colorMap A map of a color array
+	 * @param name                 The name for matching a key
+	 * @param lecturePropertiesMap A map of a color array
 	 * @return The color array of the name from the color map, or null if name not
 	 *         matches a color map key
 	 */
-	public static XSSFColor[] getColorPairFromMap(String name, Map<String, XSSFColor[]> colorMap) {
-		XSSFColor[] color = null;
-		for (String key : colorMap.keySet()) {
+	public static LectureProperties getLecturePropertiesFromMap(String name,
+			Map<String, LectureProperties> lecturePropertiesMap) {
+		LectureProperties lectureProperties = null;
+		for (String key : lecturePropertiesMap.keySet()) {
 			String matchKey = "\\Q" + key.replace("*", "\\E.*\\Q") + "\\E";
 			if (name.matches(matchKey)) {
-				color = colorMap.get(key);
+				lectureProperties = lecturePropertiesMap.get(key);
+				break;
 			}
 		}
-		return color;
+		return lectureProperties;
 	}
 
 	/**
@@ -1003,6 +922,28 @@ public class LectureWorkbook {
 		String hour = hours < 10 ? "0" + hours : Integer.toString(hours);
 		String minute = minutes < 10 ? "0" + minutes : Integer.toString(minutes);
 		return hour + ":" + minute;
+	}
+
+	/**
+	 * Converts the given week of the year, day of the week and year to a Date.
+	 * 
+	 * @param weekOfYear The week of the year
+	 * @param dayOfWeek  The day of the week
+	 * @param year       The year
+	 * @param timeZone   The time zone
+	 * @return The date created from the given parameters
+	 */
+	public static Calendar weekOfYearToDate(int weekOfYear, int dayOfWeek, int year, TimeZone timeZone) {
+		Calendar calendar = new GregorianCalendar();
+		calendar.set(Calendar.DAY_OF_WEEK, dayOfWeek);
+		calendar.set(Calendar.WEEK_OF_YEAR, weekOfYear);
+		calendar.set(Calendar.YEAR, year);
+		calendar.setTimeZone(timeZone);
+		calendar.set(Calendar.HOUR_OF_DAY, 0);
+		calendar.set(Calendar.MINUTE, 0);
+		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MILLISECOND, 0);
+		return calendar;
 	}
 
 	/**
