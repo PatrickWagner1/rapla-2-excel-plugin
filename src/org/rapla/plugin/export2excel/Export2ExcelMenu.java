@@ -321,29 +321,26 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 				Object value = column.getValue(row);
 				String columnName = column.getColumnName();
 
-				if (value != null) {
-					if (columnName == getString("resources")) {
-						String[] resources = escape(value).split(", ");
-						for (String resource : resources) {
-							if (!Export2ExcelMenu.resourceIsRoom(resource)) {
-								resource = resource.replaceAll(" \\(.*\\)", "");
-								int count = 0;
-								if (classNames.containsKey(resource)) {
-									count = classNames.get(resource);
-								}
-								count++;
-								classNames.put(resource, count);
+				if (columnName == getString("resources") && value != null) {
+					String[] resources = this.escape(value).split(", ");
+					for (String resource : resources) {
+						if (!Export2ExcelMenu.resourceIsRoom(resource)) {
+							resource = resource.replaceAll(" \\(.*\\)", "");
+							int count = 0;
+							if (classNames.containsKey(resource)) {
+								count = classNames.get(resource);
 							}
+							count++;
+							classNames.put(resource, count);
 						}
-
 					}
+
 				}
 			}
 		}
-
 		return getHighestCountKey(classNames);
 	}
-	
+
 	public static boolean resourceIsRoom(String resourceName) {
 		return !resourceName.matches(".*\\p{Upper}{3}\\d{2}.*");
 	}
@@ -357,16 +354,10 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	private static String getHighestCountKey(Map<String, Integer> map) {
 		Entry<String, Integer> highestEntry = null;
 		for (Entry<String, Integer> entry : map.entrySet()) {
-			if (highestEntry == null) {
-				highestEntry = entry;
-			} else if (entry.getValue() > highestEntry.getValue()) {
+			if (highestEntry == null || entry.getValue() > highestEntry.getValue()) {
 				highestEntry = entry;
 			}
 		}
-		if (highestEntry == null) {
-			return null;
-		} else {
-			return highestEntry.getKey();
-		}
+		return highestEntry == null ? null : highestEntry.getKey();
 	}
 }
