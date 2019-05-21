@@ -619,11 +619,11 @@ public class LectureWorkbook {
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			cellStyle.setWrapText(true);
 			cellStyle.setVerticalAlignment(VerticalAlignment.TOP);
-			String shortLectureName = "";
+			String shortLectureName = groupedLectureName;
 			if (lectureProperties != null) {
 				fontColor = lectureProperties.getFontColor();
 				cellStyle.setFillForegroundColor(lectureProperties.getFillColor());
-				shortLectureName = lectureProperties.getShortLectureName();
+				shortLectureName = shortLectureName.replace(rawLectureName, lectureProperties.getShortLectureName());
 			} else {
 				cellStyle.setFillForegroundColor(LectureWorkbook.colorToXSSFColor(Color.WHITE));
 			}
