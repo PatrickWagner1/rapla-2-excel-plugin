@@ -345,7 +345,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	}
 	
 	public static boolean resourceIsRoom(String resourceName) {
-		return !resourceName.endsWith(")");
+		return !resourceName.matches(".*\\p{Upper}{3}\\d{2}.*");
 	}
 
 	/**
