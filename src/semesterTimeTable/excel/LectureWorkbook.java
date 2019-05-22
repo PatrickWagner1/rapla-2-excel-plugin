@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -90,11 +91,6 @@ public class LectureWorkbook {
 	 * blocks. For more details see {@link #setBorderLists()}
 	 */
 	private List<List<Integer>> borderColumns;
-	/**
-	 * Lists of rows for different types of top borders in the exam week. For more
-	 * details see {@link #setBorderLists()}
-	 */
-	private List<List<Integer>> borderRowsExamWeek;
 	/**
 	 * Lists of rows for different types of top borders. For more details see
 	 * {@link #setBorderLists()}
@@ -234,15 +230,25 @@ public class LectureWorkbook {
 	 */
 	public void fillWorkbook() {
 		XSSFSheet sheet = this.getSheet();
-		List<CellRangeAddress> ranges = sheet.getMergedRegions();
-		for (int index = sheet.getNumMergedRegions() - 1; index > -1; index--) {
-			CellRangeAddress range = ranges.get(index);
-			if (this.isLectureCell(range.getFirstRow(), range.getFirstColumn())) {
-				sheet.removeMergedRegion(index);
-			}
-		}
-
 		this.resetLectureAreaInWorkbook();
+
+		ConfigWorkbook configWorkbook = this.getConfigWorkbook();
+		int firstColumn = 22 - configWorkbook.getExamWeekLength();
+		if (firstColumn < 22) {
+			sheet.addMergedRegion(new CellRangeAddress(139, 146, firstColumn, 21));
+			XSSFCell cell = sheet.getRow(139).getCell(firstColumn);
+
+			XSSFCellStyle cellStyle = this.getWorkbook().createCellStyle();
+			cellStyle.setFillForegroundColor(configWorkbook.getExamWeekFillColor());
+			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+			cellStyle.setWrapText(true);
+			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+			cellStyle.setAlignment(HorizontalAlignment.CENTER);
+			cellStyle.setFont(configWorkbook.getExamWeekFont());
+
+			cell.setCellStyle(cellStyle);
+			cell.setCellValue(configWorkbook.getExamWeekText());
+		}
 
 		this.addLecturesToWorkbook();
 
@@ -259,9 +265,8 @@ public class LectureWorkbook {
 	 * @return true if cell is part of the lecture area, false otherwise
 	 */
 	private boolean isLectureCell(int rowNum, int columnNum) {
-		return (((rowNum > 2 && rowNum < 49) || (rowNum > 51 && rowNum < 98) || (rowNum > 100 && rowNum < 139))
-				&& (columnNum > 0 && columnNum != 11 && columnNum < 22))
-				|| ((rowNum > 138 && rowNum < 147) && (columnNum > 0 && columnNum != 11 && columnNum < 16));
+		return ((rowNum > 2 && rowNum < 49) || (rowNum > 51 && rowNum < 98) || (rowNum > 100 && rowNum < 147))
+				&& (columnNum > 0 && columnNum != 11 && columnNum < 22);
 	}
 
 	/**
@@ -292,9 +297,8 @@ public class LectureWorkbook {
 	 * </tr>
 	 * </table>
 	 * 
-	 * Each border rows list ({@link #borderRowsExamWeek}, {@link #borderRows})
-	 * contains three lists. Each inner list contains row numbers for different top
-	 * border types.
+	 * Each border rows list ({@link #borderRows}) contains three lists. Each inner
+	 * list contains row numbers for different top border types.
 	 * 
 	 * <table>
 	 * <tr>
@@ -317,44 +321,45 @@ public class LectureWorkbook {
 	 * 
 	 */
 	private void setBorderLists() {
+		int firstExamWeekColumn = 22 - this.getConfigWorkbook().getExamWeekLength();
+
+		List<Integer> leftBorderColumns = Arrays.asList(1, 6, 12, 17);
+		List<Integer> noBorderColumns = Arrays.asList(2, 3, 4, 7, 8, 9, 13, 14, 15, 18, 19, 20);
+		List<Integer> rightBorderColumns = Arrays.asList(5, 10, 16, 21);
+
 		this.borderColumnsLastBlock = new ArrayList<List<Integer>>(3);
 		this.borderColumnsExamWeek = new ArrayList<List<Integer>>(3);
 		this.borderColumns = new ArrayList<List<Integer>>(3);
 
-		this.borderColumnsLastBlock.add(0, Arrays.asList(1, 6, 12));
-		this.borderColumnsExamWeek.add(0, Arrays.asList(17));
-		this.borderColumns.add(0, new ArrayList<Integer>());
-		this.borderColumns.get(0).addAll(this.borderColumnsLastBlock.get(0));
-		this.borderColumns.get(0).addAll(this.borderColumnsExamWeek.get(0));
+		this.borderColumnsLastBlock.add(0, LectureWorkbook.getSubColumnList(leftBorderColumns, 0, firstExamWeekColumn));
+		this.borderColumnsExamWeek.add(0, LectureWorkbook.getSubColumnList(leftBorderColumns, firstExamWeekColumn, 22));
+		this.borderColumns.add(0, leftBorderColumns);
 
-		this.borderColumnsLastBlock.add(1, Arrays.asList(2, 3, 4, 7, 8, 9, 13, 14, 15));
-		this.borderColumnsExamWeek.add(1, Arrays.asList(18, 19, 20));
-		this.borderColumns.add(1, new ArrayList<Integer>());
-		this.borderColumns.get(1).addAll(this.borderColumnsLastBlock.get(1));
-		this.borderColumns.get(1).addAll(this.borderColumnsExamWeek.get(1));
+		this.borderColumnsLastBlock.add(1, LectureWorkbook.getSubColumnList(noBorderColumns, 0, firstExamWeekColumn));
+		this.borderColumnsExamWeek.add(1, LectureWorkbook.getSubColumnList(noBorderColumns, firstExamWeekColumn, 22));
+		this.borderColumns.add(1, noBorderColumns);
 
-		this.borderColumnsLastBlock.add(2, Arrays.asList(5, 10));
-		this.borderColumnsExamWeek.add(2, Arrays.asList(16, 21));
-		this.borderColumns.add(2, new ArrayList<Integer>());
-		this.borderColumns.get(2).addAll(this.borderColumnsLastBlock.get(2));
-		this.borderColumns.get(2).addAll(this.borderColumnsExamWeek.get(2));
-
-		this.borderRowsExamWeek = new ArrayList<List<Integer>>(3);
-		this.borderRowsExamWeek.add(0,
-				Arrays.asList(5, 6, 8, 9, 12, 13, 15, 16, 19, 20, 22, 23, 25, 26, 27, 29, 30, 32, 33, 36, 37, 39, 40));
-		this.borderRowsExamWeek.add(1, Arrays.asList(4, 7, 10, 11, 14, 17, 18, 21, 31, 34, 35, 38));
-		this.borderRowsExamWeek.add(2, Arrays.asList(3, 24, 28));
+		this.borderColumnsLastBlock.add(2,
+				LectureWorkbook.getSubColumnList(rightBorderColumns, 0, firstExamWeekColumn));
+		this.borderColumnsExamWeek.add(2,
+				LectureWorkbook.getSubColumnList(rightBorderColumns, firstExamWeekColumn, 22));
+		this.borderColumns.add(2, rightBorderColumns);
 
 		this.borderRows = new ArrayList<List<Integer>>(3);
-		this.borderRows.add(0, new ArrayList<Integer>());
-		this.borderRows.add(1, new ArrayList<Integer>());
-		this.borderRows.add(2, new ArrayList<Integer>());
+		this.borderRows.add(0, Arrays.asList(5, 6, 8, 9, 12, 13, 15, 16, 19, 20, 22, 23, 25, 26, 27, 29, 30, 32, 33, 36,
+				37, 39, 40, 43, 44, 46, 47));
+		this.borderRows.add(1, Arrays.asList(4, 7, 10, 11, 14, 17, 18, 21, 31, 34, 35, 38, 41, 42, 45, 48));
+		this.borderRows.add(2, Arrays.asList(3, 24, 28));
+	}
 
-		this.borderRows.get(2).addAll(this.borderRowsExamWeek.get(2));
-		this.borderRows.get(1).addAll(this.borderRowsExamWeek.get(1));
-		this.borderRows.get(1).addAll(Arrays.asList(41, 42, 45, 48));
-		this.borderRows.get(0).addAll(this.borderRowsExamWeek.get(0));
-		this.borderRows.get(0).addAll(Arrays.asList(43, 44, 46, 47));
+	private static List<Integer> getSubColumnList(List<Integer> columns, int startColumn, int endColumn) {
+		List<Integer> subColumns = new ArrayList<Integer>();
+		for (int column : columns) {
+			if (column >= startColumn && column < endColumn) {
+				subColumns.add(column);
+			}
+		}
+		return subColumns;
 	}
 
 	/**
@@ -427,6 +432,14 @@ public class LectureWorkbook {
 	 * the cells blank and adding the correct cellStyle.
 	 */
 	private void resetLectureAreaInWorkbook() {
+		XSSFSheet sheet = this.getSheet();
+		List<CellRangeAddress> ranges = sheet.getMergedRegions();
+		for (int index = sheet.getNumMergedRegions() - 1; index > -1; index--) {
+			CellRangeAddress range = ranges.get(index);
+			if (this.isLectureCell(range.getFirstRow(), range.getFirstColumn())) {
+				sheet.removeMergedRegion(index);
+			}
+		}
 
 		// First two blocks
 		for (int block = 0; block < 2; block++) {
@@ -447,12 +460,14 @@ public class LectureWorkbook {
 			}
 		}
 
-		// Last block without exam week
+		// Last block
 		int blockStartRow = 2 * 49;
 		int kindOfRowIndex = 0;
 		for (List<Integer> kindOfRow : this.borderRows) {
 			for (int rawRowNum : kindOfRow) {
 				int rowNum = rawRowNum + blockStartRow;
+
+				// Before Exam week
 				int kindOfColumnIndex = 0;
 				for (List<Integer> kindOfColumn : this.borderColumnsLastBlock) {
 					for (int columnNum : kindOfColumn) {
@@ -460,16 +475,9 @@ public class LectureWorkbook {
 					}
 					kindOfColumnIndex++;
 				}
-			}
-			kindOfRowIndex++;
-		}
 
-		// Exam week
-		kindOfRowIndex = 0;
-		for (List<Integer> kindOfRow : this.borderRowsExamWeek) {
-			for (int rawRowNum : kindOfRow) {
-				int rowNum = rawRowNum + blockStartRow;
-				int kindOfColumnIndex = 0;
+				// Exam week
+				kindOfColumnIndex = 0;
 				for (List<Integer> kindOfColumn : this.borderColumnsExamWeek) {
 					for (int columnNum : kindOfColumn) {
 						this.resetCell(rowNum, columnNum, this.borderStyleExamWeek[kindOfRowIndex][kindOfColumnIndex]);

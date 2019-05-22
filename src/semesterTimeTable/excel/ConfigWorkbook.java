@@ -18,6 +18,7 @@ import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -45,7 +46,15 @@ public class ConfigWorkbook {
 
 	private int[] quarterStartWeeks;
 
+	private int examWeekLength;
+
 	private Calendar quarterStartDate;
+
+	private XSSFRichTextString examWeekText;
+
+	private XSSFFont examWeekFont;
+
+	private XSSFColor examWeekFillColor;
 
 	private XSSFWorkbook workbook;
 
@@ -263,6 +272,25 @@ public class ConfigWorkbook {
 		this.quarterStartWeeks = quarterStartWeeks;
 	}
 
+	public int getExamWeekLength() {
+		return this.examWeekLength;
+	}
+
+	private void setExamWeekLength(XSSFSheet sheet) {
+		int[] lengths = ConfigWorkbook.getIntegerValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 6, 6));
+		if (lengths.length == 1) {
+			if (lengths[0] < 0) {
+				this.examWeekLength = 0;
+			} else if(lengths[0] > 10) {
+				this.examWeekLength = 10;
+			} else {
+				this.examWeekLength = lengths[0];
+			}
+		} else {
+			this.examWeekLength = 6;
+		}
+	}
+
 	public Calendar getQuarterStartDate() {
 		return this.quarterStartDate;
 	}
@@ -284,6 +312,36 @@ public class ConfigWorkbook {
 			quarterStartDate.setTime(dates[0]);
 			quarterStartDate.setTimeZone(timeZone);
 			this.quarterStartDate = quarterStartDate;
+		}
+	}
+
+	public XSSFRichTextString getExamWeekText() {
+		return this.examWeekText;
+	}
+
+	public XSSFFont getExamWeekFont() {
+		return this.examWeekFont;
+	}
+
+	public XSSFColor getExamWeekFillColor() {
+		return this.examWeekFillColor;
+	}
+
+	private void setExamWeekTextAndStyle(XSSFSheet sheet) {
+		XSSFRow row = sheet.getRow(2);
+		if (row != null) {
+			XSSFCell cell = row.getCell(8);
+			if (cell != null && cell.getCellType() == CellType.STRING) {
+				XSSFRichTextString richText = cell.getRichStringCellValue();
+				XSSFCellStyle cellStyle = cell.getCellStyle();
+				XSSFColor fillColor = cellStyle.getFillForegroundColorColor();
+				fillColor = fillColor == null ? cellStyle.getFillBackgroundColorColor() : fillColor;
+				XSSFFont font = cellStyle.getFont();
+
+				this.examWeekText = richText;
+				this.examWeekFont = font;
+				this.examWeekFillColor = fillColor;
+			}
 		}
 	}
 
@@ -344,7 +402,9 @@ public class ConfigWorkbook {
 		this.setIgnorePrefixes(sheet);
 		this.setHolidayLocale(sheet);
 		this.setQuarterStartWeeks(sheet);
+		this.setExamWeekLength(sheet);
 		this.setQuarterStartDate(sheet);
+		this.setExamWeekTextAndStyle(sheet);
 	}
 
 	public void addLectureNames(List<String> lectureNames) throws IOException {
