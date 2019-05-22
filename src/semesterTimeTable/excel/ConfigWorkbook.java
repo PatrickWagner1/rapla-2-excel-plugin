@@ -59,7 +59,7 @@ public class ConfigWorkbook {
 	 * @throws IOException If loading the template file fails
 	 */
 	public ConfigWorkbook() throws IOException {
-		this.setWorkbook(LectureWorkbook
+		this.setWorkbook(ApachePOIWrapper
 				.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
 		this.initConfigWorkbook();
 		this.setIsNewConfig(false);
@@ -78,11 +78,11 @@ public class ConfigWorkbook {
 	public ConfigWorkbook(String pathToTemplate) throws IOException {
 		File file = new File(pathToTemplate, ConfigWorkbook.TEMPLATE_FILENAME);
 		if (file.exists()) {
-			this.setWorkbook(LectureWorkbook.loadWorkbookFromFile(file));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromFile(file));
 			this.initConfigWorkbook();
 			this.setIsNewConfig(false);
 		} else {
-			this.setWorkbook(LectureWorkbook
+			this.setWorkbook(ApachePOIWrapper
 					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
 			this.initConfigWorkbook(file);
 			this.setIsNewConfig(true);
@@ -111,11 +111,11 @@ public class ConfigWorkbook {
 	public ConfigWorkbook(String pathToTemplate, List<String> lectureNames) throws IOException {
 		File file = new File(pathToTemplate, ConfigWorkbook.TEMPLATE_FILENAME);
 		if (file.exists()) {
-			this.setWorkbook(LectureWorkbook.loadWorkbookFromFile(file));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromFile(file));
 			this.initConfigWorkbook();
 			this.setIsNewConfig(false);
 		} else {
-			this.setWorkbook(LectureWorkbook
+			this.setWorkbook(ApachePOIWrapper
 					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
 			this.initConfigWorkbook(file, lectureNames);
 			this.setIsNewConfig(true);
@@ -135,11 +135,11 @@ public class ConfigWorkbook {
 	public ConfigWorkbook(String pathToTemplate, String templateFilename) throws IOException {
 		File file = new File(pathToTemplate, templateFilename);
 		if (file.exists()) {
-			this.setWorkbook(LectureWorkbook.loadWorkbookFromFile(file));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromFile(file));
 			this.initConfigWorkbook();
 			this.setIsNewConfig(false);
 		} else {
-			this.setWorkbook(LectureWorkbook
+			this.setWorkbook(ApachePOIWrapper
 					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
 			this.initConfigWorkbook(file);
 			this.setIsNewConfig(true);
@@ -169,11 +169,11 @@ public class ConfigWorkbook {
 			throws IOException {
 		File file = new File(pathToTemplate, templateFilename);
 		if (file.exists()) {
-			this.setWorkbook(LectureWorkbook.loadWorkbookFromFile(file));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromFile(file));
 			this.initConfigWorkbook();
 			this.setIsNewConfig(false);
 		} else {
-			this.setWorkbook(LectureWorkbook
+			this.setWorkbook(ApachePOIWrapper
 					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
 			this.initConfigWorkbook(file, lectureNames);
 			this.setIsNewConfig(true);
@@ -220,7 +220,7 @@ public class ConfigWorkbook {
 
 	private void setIgnorePrefixes(XSSFSheet sheet) {
 		int lastRowNum = sheet.getLastRowNum();
-		this.ignorePrefixes = ConfigWorkbook.getStringValuesFromWorkbook(sheet,
+		this.ignorePrefixes = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
 				new CellRangeAddress(2, lastRowNum, 3, 3));
 	}
 
@@ -230,7 +230,7 @@ public class ConfigWorkbook {
 
 	private void setHolidayLocale(XSSFSheet sheet) {
 		int lastRowNum = sheet.getLastRowNum();
-		String[] localeValues = ConfigWorkbook.getStringValuesFromWorkbook(sheet,
+		String[] localeValues = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
 				new CellRangeAddress(2, lastRowNum, 4, 4));
 		if (localeValues.length > 0) {
 			String country = localeValues[0];
@@ -268,8 +268,8 @@ public class ConfigWorkbook {
 	}
 
 	private void setQuarterStartDate(XSSFSheet sheet) {
-		Date[] dates = ConfigWorkbook.getDateValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 7, 7));
-		String[] timeZoneCodes = ConfigWorkbook.getStringValuesFromWorkbook(sheet, new CellRangeAddress(3, 3, 7, 7));
+		Date[] dates = ApachePOIWrapper.getDateValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 7, 7));
+		String[] timeZoneCodes = ApachePOIWrapper.getStringValuesFromWorkbook(sheet, new CellRangeAddress(3, 3, 7, 7));
 
 		TimeZone timeZone;
 		Calendar quarterStartDate;
@@ -349,9 +349,9 @@ public class ConfigWorkbook {
 
 	public void addLectureNames(List<String> lectureNames) throws IOException {
 		int rowNum = 2;
-		XSSFSheet sheet = this.getWorkbook().getSheetAt(0);
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
-		String[] namesToColor = ConfigWorkbook.getStringValuesFromWorkbook(sheet,
+		String[] namesToColor = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
 				new CellRangeAddress(rowNum, lastRowNum, 0, 0));
 		this.setIgnorePrefixes(sheet);
 
@@ -413,6 +413,7 @@ public class ConfigWorkbook {
 			}
 		}
 		return lecturePropertiesMap;
+		// TODO move to ApachePOIWrapper? Generalize variable names
 	}
 
 	/**
@@ -443,31 +444,7 @@ public class ConfigWorkbook {
 
 		}
 		return fontMap;
-	}
-
-	/**
-	 * Returns an array of all values from a cell range. Cells with no value will
-	 * not be added to the array.
-	 * 
-	 * @param sheet     The sheet, which will be scanned
-	 * @param cellRange The cell range, which will be scanned
-	 * @return An array of cell values
-	 */
-	public static String[] getStringValuesFromWorkbook(XSSFSheet sheet, CellRangeAddress cellRange) {
-		List<String> valueList = new ArrayList<String>();
-		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {
-			XSSFRow row = sheet.getRow(rowNum);
-			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
-				XSSFCell cell = row.getCell(columnNum);
-				if (cell != null && cell.getCellType() == CellType.STRING) {
-					String value = cell.getStringCellValue();
-					if (value != null && value != "") {
-						valueList.add(value);
-					}
-				}
-			}
-		}
-		return valueList.toArray(new String[valueList.size()]);
+		// TODO move to ApachePOIWrapper? Generalize variable names
 	}
 
 	public static int[] getIntegerValuesFromWorkbook(XSSFSheet sheet, CellRangeAddress cellRange) {
@@ -496,23 +473,7 @@ public class ConfigWorkbook {
 			valueArray[i] = valueList.get(i);
 		}
 		return valueArray;
-	}
-
-	public static Date[] getDateValuesFromWorkbook(XSSFSheet sheet, CellRangeAddress cellRange) {
-		List<Date> valueList = new ArrayList<Date>();
-		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {
-			XSSFRow row = sheet.getRow(rowNum);
-			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
-				XSSFCell cell = row.getCell(columnNum);
-				if (cell != null && cell.getCellType() == CellType.NUMERIC) {
-					Date value = cell.getDateCellValue();
-					if (value != null) {
-						valueList.add(value);
-					}
-				}
-			}
-		}
-		return valueList.toArray(new Date[valueList.size()]);
+		// TODO move to ApachePOIWrapper? Generalize variable names
 	}
 
 	public static int addValueToNextEmptyCellInARow(XSSFSheet sheet, String value, int startRowNum, int columnNum) {
@@ -542,5 +503,6 @@ public class ConfigWorkbook {
 			}
 		}
 		return matches;
+		// TODO move method to helper class
 	}
 }

@@ -2,7 +2,6 @@ package semesterTimeTable.excel;
 
 import java.awt.Color;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -25,7 +24,6 @@ import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xssf.usermodel.DefaultIndexedColorMap;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
@@ -143,9 +141,9 @@ public class LectureWorkbook {
 		File file = new File(filename);
 		this.setConfigWorkbook(new ConfigWorkbook(file.getParent()));
 		if (file.exists()) {
-			this.setWorkbook(LectureWorkbook.loadWorkbookFromFile(file));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromFile(file));
 		} else {
-			this.setWorkbook(LectureWorkbook
+			this.setWorkbook(ApachePOIWrapper
 					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(LectureWorkbook.TEMPLATE_FILENAME)));
 		}
 		this.setBorderLists();
@@ -154,32 +152,6 @@ public class LectureWorkbook {
 		if (quarterStartDate != null) {
 			this.setBorderDatesWithDateInFirstWeek(quarterStartDate);
 		}
-	}
-
-	/**
-	 * Converts an array of Colors into an array of XSSFColors.
-	 * 
-	 * @param colors The colors to be converted
-	 * @return The array of XSSFColors
-	 */
-	public static XSSFColor[] colorsToXSSFColors(Color[] colors) {
-		XSSFColor[] xssfColors = new XSSFColor[colors.length];
-		int index = 0;
-		for (Color color : colors) {
-			xssfColors[index] = colorToXSSFColor(color);
-			index++;
-		}
-		return xssfColors;
-	}
-
-	/**
-	 * Converts a Color into a XSSFColor.
-	 * 
-	 * @param color The color to be converted
-	 * @return The XSSFColor
-	 */
-	public static XSSFColor colorToXSSFColor(Color color) {
-		return new XSSFColor(color, new DefaultIndexedColorMap());
 	}
 
 	/**
@@ -198,15 +170,6 @@ public class LectureWorkbook {
 	 */
 	private void setConfigWorkbook(ConfigWorkbook colorWorkbook) {
 		this.configWorkbook = colorWorkbook;
-	}
-
-	/**
-	 * Returns the first (and usually only) sheet of the lecture workbook.
-	 * 
-	 * @return The first sheet of the workbook
-	 */
-	public XSSFSheet getSheet() {
-		return this.getWorkbook().getSheetAt(0);
 	}
 
 	/**
@@ -233,7 +196,7 @@ public class LectureWorkbook {
 	 * groupedLectures into the workbook.
 	 */
 	public void fillWorkbook() {
-		XSSFSheet sheet = this.getSheet();
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		List<CellRangeAddress> ranges = sheet.getMergedRegions();
 		for (int index = sheet.getNumMergedRegions() - 1; index > -1; index--) {
 			CellRangeAddress range = ranges.get(index);
@@ -372,7 +335,7 @@ public class LectureWorkbook {
 		this.borderStyle[0][1] = workbook.createCellStyle();
 		this.borderStyle[0][1].setBorderLeft(BorderStyle.THIN);
 		this.borderStyle[0][1].setBorderRight(BorderStyle.THIN);
-		this.borderStyle[0][1].setFillForegroundColor(LectureWorkbook.colorToXSSFColor(Color.WHITE));
+		this.borderStyle[0][1].setFillForegroundColor(ApachePOIWrapper.colorToXSSFColor(Color.WHITE));
 		this.borderStyle[0][1].setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
 		this.borderStyle[0][0] = workbook.createCellStyle();
@@ -397,7 +360,7 @@ public class LectureWorkbook {
 
 		this.borderStyle[1][1] = workbook.createCellStyle();
 		this.borderStyle[1][1].cloneStyleFrom(this.borderStyle[2][1]);
-		this.borderStyle[1][1].setTopBorderColor(colorToXSSFColor(Color.LIGHT_GRAY));
+		this.borderStyle[1][1].setTopBorderColor(ApachePOIWrapper.colorToXSSFColor(Color.LIGHT_GRAY));
 
 		this.borderStyle[1][0] = workbook.createCellStyle();
 		this.borderStyle[1][0].cloneStyleFrom(this.borderStyle[1][1]);
@@ -413,12 +376,13 @@ public class LectureWorkbook {
 				this.borderStyleExamWeek[kindOfRow][kindOfColumn] = workbook.createCellStyle();
 				this.borderStyleExamWeek[kindOfRow][kindOfColumn]
 						.cloneStyleFrom(this.borderStyle[kindOfRow][kindOfColumn]);
-				this.borderStyleExamWeek[kindOfRow][kindOfColumn].setFillForegroundColor(colorToXSSFColor(Color.CYAN));
+				this.borderStyleExamWeek[kindOfRow][kindOfColumn]
+						.setFillForegroundColor(ApachePOIWrapper.colorToXSSFColor(Color.CYAN));
 				this.borderStyleExamWeek[kindOfRow][kindOfColumn].setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			}
 		}
 		for (int kindOfColumn = 0; kindOfColumn < 3; kindOfColumn++) {
-			this.borderStyleExamWeek[1][kindOfColumn].setTopBorderColor(colorToXSSFColor(Color.BLACK));
+			this.borderStyleExamWeek[1][kindOfColumn].setTopBorderColor(ApachePOIWrapper.colorToXSSFColor(Color.BLACK));
 		}
 	}
 
@@ -438,7 +402,8 @@ public class LectureWorkbook {
 					int kindOfColumnIndex = 0;
 					for (List<Integer> kindOfColumn : this.borderColumns) {
 						for (int columnNum : kindOfColumn) {
-							this.resetCell(rowNum, columnNum, this.borderStyle[kindOfRowIndex][kindOfColumnIndex]);
+							ApachePOIWrapper.resetCell(this.getWorkbook(), rowNum, columnNum,
+									this.borderStyle[kindOfRowIndex][kindOfColumnIndex]);
 						}
 						kindOfColumnIndex++;
 					}
@@ -456,7 +421,8 @@ public class LectureWorkbook {
 				int kindOfColumnIndex = 0;
 				for (List<Integer> kindOfColumn : this.borderColumnsLastBlock) {
 					for (int columnNum : kindOfColumn) {
-						this.resetCell(rowNum, columnNum, this.borderStyle[kindOfRowIndex][kindOfColumnIndex]);
+						ApachePOIWrapper.resetCell(this.getWorkbook(), rowNum, columnNum,
+								this.borderStyle[kindOfRowIndex][kindOfColumnIndex]);
 					}
 					kindOfColumnIndex++;
 				}
@@ -472,26 +438,14 @@ public class LectureWorkbook {
 				int kindOfColumnIndex = 0;
 				for (List<Integer> kindOfColumn : this.borderColumnsExamWeek) {
 					for (int columnNum : kindOfColumn) {
-						this.resetCell(rowNum, columnNum, this.borderStyleExamWeek[kindOfRowIndex][kindOfColumnIndex]);
+						ApachePOIWrapper.resetCell(this.getWorkbook(), rowNum, columnNum,
+								this.borderStyleExamWeek[kindOfRowIndex][kindOfColumnIndex]);
 					}
 					kindOfColumnIndex++;
 				}
 			}
 			kindOfRowIndex++;
 		}
-	}
-
-	/**
-	 * Resets a cell by setting the cell blank and setting the given cellStyle
-	 * 
-	 * @param rowNum    The (0 based) row number of the cell
-	 * @param columnNum The (0 based) column number of the cell
-	 * @param cellStyle The style for the cell
-	 */
-	private void resetCell(int rowNum, int columnNum, XSSFCellStyle cellStyle) {
-		XSSFCell cell = this.getSheet().getRow(rowNum).getCell(columnNum);
-		cell.setBlank();
-		cell.setCellStyle(cellStyle);
 	}
 
 	/**
@@ -505,7 +459,7 @@ public class LectureWorkbook {
 	}
 
 	/**
-	 * REturns the excluded end date of the quarter. It can cause layout errors in
+	 * Returns the excluded end date of the quarter. It can cause layout errors in
 	 * the workbook, if the day of the date is not a Saturday.
 	 * 
 	 * @return The excluded end date of the quarter
@@ -625,7 +579,7 @@ public class LectureWorkbook {
 				cellStyle.setFillForegroundColor(lectureProperties.getFillColor());
 				shortLectureName = shortLectureName.replace(rawLectureName, lectureProperties.getShortLectureName());
 			} else {
-				cellStyle.setFillForegroundColor(LectureWorkbook.colorToXSSFColor(Color.WHITE));
+				cellStyle.setFillForegroundColor(ApachePOIWrapper.colorToXSSFColor(Color.WHITE));
 			}
 			mainFont.setColor(fontColor);
 
@@ -654,7 +608,7 @@ public class LectureWorkbook {
 		boolean mergedSuccessful = false;
 		boolean addedSuccessful = false;
 		CellRangeAddress cellRange = getCellRangeFromLecture(this.getQuarterStartDate(), lecture);
-		XSSFSheet sheet = this.getSheet();
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		if (cellRange != null) {
 			try {
 				sheet.addMergedRegion(cellRange);
@@ -727,6 +681,7 @@ public class LectureWorkbook {
 			String endTime = LectureWorkbook.getTime(lecture.getEndDate());
 			text += LectureWorkbook.LINE_BREAK + startTime + "-" + endTime;
 		}
+		// TODO move following lines to ApachePOIWrapper?
 		XSSFRichTextString richText = new XSSFRichTextString(text);
 		richText.applyFont(mainFont);
 		for (Entry<XSSFFont, Integer[]> lectureNameFont : lectureNameFonts.entrySet()) {
@@ -801,6 +756,7 @@ public class LectureWorkbook {
 			}
 		}
 		return rawString;
+		// TODO move method to helper class
 	}
 
 	/**
@@ -944,19 +900,6 @@ public class LectureWorkbook {
 		calendar.set(Calendar.SECOND, 0);
 		calendar.set(Calendar.MILLISECOND, 0);
 		return calendar;
-	}
-
-	/**
-	 * Returns the workbook of the given file.
-	 * 
-	 * @param file The file of the workbook
-	 * @return The workbook of the given file
-	 * @throws IOException If reading the workbook failed
-	 */
-	public static XSSFWorkbook loadWorkbookFromFile(File file) throws IOException {
-		FileInputStream excelFile = new FileInputStream(file);
-		XSSFWorkbook workbook = new XSSFWorkbook(excelFile);
-		return workbook;
 	}
 
 	/**

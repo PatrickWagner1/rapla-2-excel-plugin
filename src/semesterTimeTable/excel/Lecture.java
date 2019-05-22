@@ -9,7 +9,7 @@ public class Lecture {
 
 	/** Name of the lecture. */
 	private String name;
-	
+
 	/** Short name of the lecture */
 	private String shortName;
 
@@ -110,11 +110,11 @@ public class Lecture {
 	private void setName(String name) {
 		this.name = name;
 	}
-	
+
 	public String getShortName() {
 		return this.shortName;
 	}
-	
+
 	public void setShortName(String shortName) {
 		this.shortName = shortName;
 	}
