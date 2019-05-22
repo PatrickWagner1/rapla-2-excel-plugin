@@ -581,11 +581,15 @@ public class LectureWorkbook {
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			cellStyle.setWrapText(true);
 			cellStyle.setVerticalAlignment(VerticalAlignment.TOP);
-			String shortLectureName = groupedLectureName;
+			String shortLectureName = rawLectureName == LectureWorkbook.HOLIDAY ? "" : groupedLectureName;
 			if (lectureProperties != null) {
 				fontColor = lectureProperties.getFontColor();
 				cellStyle.setFillForegroundColor(lectureProperties.getFillColor());
-				shortLectureName = shortLectureName.replace(rawLectureName, lectureProperties.getShortLectureName());
+				String subShortLectureName = lectureProperties.getShortLectureName();
+				if (subShortLectureName != "") {
+					shortLectureName = shortLectureName.replace(rawLectureName,
+							lectureProperties.getShortLectureName());
+				}
 			} else {
 				cellStyle.setFillForegroundColor(ApachePOIWrapper.colorToXSSFColor(Color.WHITE));
 			}
