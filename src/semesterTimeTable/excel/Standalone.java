@@ -16,44 +16,57 @@ import java.util.Map;
 import java.util.TimeZone;
 import java.util.Map.Entry;
 
-import org.rapla.framework.RaplaContextException;
-import org.rapla.framework.RaplaException;
-import org.rapla.plugin.export2excel.Export2ExcelMenu;
-
 public class Standalone {
 
+	/** CSV cell break character */
 	private static final String CELL_BREAK = ";";
 
+	/** File extension for excel files */
 	private static final String FILE_EXTENSION = "xlsx";
 
+	/** Default lecture file name */
 	private static final String LECTURE_FILE_TITLE = "Vorlesungsplan";
 
+	/** Default time zone */
 	private static final TimeZone TIME_ZONE = TimeZone.getTimeZone("GMT");
 
+	/** Column position of lecture name in CSV file */
 	private static final int LECTURE_NAME_POSITION = 0;
+	/** Column position of start date in CSV file */
 	private static final int LECTURE_START_DATE_POSITION = 1;
+	/** Column position of end date in CSV file */
 	private static final int LECTURE_END_DATE_POSITION = 2;
-	private static final int LECTURE_RESSOURCES_POSITION = 3;
+	/** Column position of resources in CSV file */
+	private static final int LECTURE_RESOURCES_POSITION = 3;
+	/** Column position of lecturers in CSV file */
 	private static final int LECTURE_LECTURERS_POSITION = 4;
 
+	/** Frame for stand alone GUI */
 	private StandaloneFrame standaloneFrame;
 
+	/**
+	 * Opens the rapla to excel converter as stand alone GUI.
+	 */
 	public Standalone() {
 		this.standaloneFrame = new StandaloneFrame();
 	}
 
+	/**
+	 * Returns the stand alone frame.
+	 * 
+	 * @return The stand alone frame.
+	 */
 	private StandaloneFrame getStandaloneFrame() {
 		return this.standaloneFrame;
 	}
 
 	/**
-	 * Method implementing the actual exporting functionality. It is called by the
-	 * event handler for clicking on the export menu entry.
+	 * Method implementing the actual exporting functionality.
 	 * 
-	 * @param model The calendar selection model
-	 * @throws Exception
+	 * @throws IOException If reading the CSV file or reading/writing the excel file
+	 *                     failed
 	 */
-	public void export() throws Exception {
+	public void export() throws IOException {
 		StandaloneFrame standaloneFrame = this.getStandaloneFrame();
 		String csvFileName = this.loadFile();
 		if (csvFileName != null && csvFileName != "") {
@@ -76,32 +89,26 @@ public class Standalone {
 				}
 
 				lectureWorkbook.setLectures(lectures);
-				this.saveFile(lectureWorkbook, path);
+				lectureWorkbook.saveToFile(path);
 				standaloneFrame.addTextLine("Export completed successfully!");
-				Thread.sleep(2000);
+				int secondsToWait = 2;
+				try {
+					Thread.sleep(secondsToWait * 1000);
+				} catch (InterruptedException e) {
+					System.err.println("Waiting for" + secondsToWait + "seconds failed");
+				}
 				standaloneFrame.close();
 			}
 		}
 	}
 
 	/**
-	 * Saves the lectures as a workbook under the given filename. If there exists a
-	 * file with the given filename, it is used as custom template workbook for the
-	 * lectures. Otherwise the standard template workbook is used.
+	 * Open a FileDialog for loading a file and return the full path of the entered
+	 * filename. If the FileDialog was closed or canceled, then null is returned.
 	 * 
-	 * @param filename         The name for the file
-	 * @param quarterStartDate The included start date of the quarter
-	 * @param lectures         a list of lectures
-	 * @throws RaplaException If loading or saving the file fails
+	 * @return The full path of the entered filename, or null if closed or canceled
+	 *         the FileDialog
 	 */
-	public void saveFile(LectureWorkbook lectureWorkbook, String filename) throws RaplaException {
-		try {
-			lectureWorkbook.saveToFile(filename);
-		} catch (IOException e) {
-			throw new RaplaException(e.getMessage(), e);
-		}
-	}
-
 	public String loadFile() {
 		final StandaloneFrame frame = this.getStandaloneFrame();
 		final FileDialog fd = new FileDialog(frame, "Load CSV File", FileDialog.LOAD);
@@ -119,8 +126,8 @@ public class Standalone {
 	}
 
 	/**
-	 * Open a FileDialog and return the full path of the entered filename. If the
-	 * FileDialog was closed or canceled, then null is returned.
+	 * Open a FileDialog for saving a file and return the full path of the entered
+	 * filename. If the FileDialog was closed or canceled, then null is returned.
 	 * 
 	 * @param filename The default filename for the FileDialog
 	 * @return The full path of the entered filename, or null if closed or canceled
@@ -170,14 +177,10 @@ public class Standalone {
 	}
 
 	/**
-	 * Converts a list of rapla objects into a list of lectures and sets the most
-	 * common class name from the lectures.
+	 * Converts a raw list of lectures into a list of lectures.
 	 * 
-	 * @param objects The rapla objects
-	 * @param columns The rapla columns
+	 * @param rawLectureList the raw list of lectures
 	 * @return A list of lectures
-	 * @throws RaplaException
-	 * @throws RaplaContextException
 	 */
 	private List<Lecture> getLecturesFromRawLectureList(List<List<String>> rawLectureList) {
 
@@ -211,7 +214,7 @@ public class Standalone {
 			}
 
 			String[] lectureResources = null;
-			String resourcesString = row.get(Standalone.LECTURE_RESSOURCES_POSITION);
+			String resourcesString = row.get(Standalone.LECTURE_RESOURCES_POSITION);
 			if (resourcesString != null) {
 				String[] resources = resourcesString.split(", ");
 				List<String> rooms = new ArrayList<String>();
@@ -237,16 +240,22 @@ public class Standalone {
 		return lectures;
 	}
 
+	/**
+	 * Returns the most common class name from a raw list of lectures.
+	 * 
+	 * @param rawLectureList The raw list of lectures
+	 * @return The most common class name from the raw lecture list
+	 */
 	private String getMostCommonClassName(List<List<String>> rawLectureList) {
 
 		Map<String, Integer> classNames = new HashMap<String, Integer>();
 
 		for (List<String> row : rawLectureList) {
-			String element = row.get(Standalone.LECTURE_RESSOURCES_POSITION);
+			String element = row.get(Standalone.LECTURE_RESOURCES_POSITION);
 			if (element != null) {
 				String[] resources = element.split(", ");
 				for (String resource : resources) {
-					if (!Export2ExcelMenu.resourceIsRoom(resource)) {
+					if (!Standalone.resourceIsRoom(resource)) {
 						resource = resource.replaceAll(" \\(.*\\)", "");
 						int count = 0;
 						if (classNames.containsKey(resource)) {
@@ -261,7 +270,17 @@ public class Standalone {
 		return getHighestCountKey(classNames);
 	}
 
-	public static List<List<String>> CSVToTwoDimList(String filename, String seperator, boolean hasTitleLine)
+	/**
+	 * Converts a CSV file to a two dimensional raw list of lectures.
+	 * 
+	 * @param filename     The filename of the CSV file
+	 * @param separator    The separator for columns in the CSV file
+	 * @param hasTitleLine True if the first line of the CSV file contains the
+	 *                     column titles, otherwise false.
+	 * @return A raw list of lectures
+	 * @throws IOException If reading CSV file failed
+	 */
+	public static List<List<String>> CSVToTwoDimList(String filename, String separator, boolean hasTitleLine)
 			throws IOException {
 		BufferedReader bufferedReader = null;
 		String line;
@@ -274,7 +293,7 @@ public class Standalone {
 				bufferedReader.readLine();
 			}
 			while ((line = bufferedReader.readLine()) != null) {
-				List<String> elements = Arrays.asList(line.split(seperator));
+				List<String> elements = Arrays.asList(line.split(separator));
 				list.add(elements);
 			}
 		} finally {
@@ -285,6 +304,13 @@ public class Standalone {
 		return list;
 	}
 
+	/**
+	 * Checks if the given resource name matches the regular expression for a room.
+	 * If the name does NOT contains 3 upper case letters followed by two digits.
+	 * 
+	 * @param resourceName The name to check if it is a room name
+	 * @return True if the given name is a room name, otherwise false.
+	 */
 	public static boolean resourceIsRoom(String resourceName) {
 		return !resourceName.matches(".*\\p{Upper}{3}\\d{2}.*");
 	}
@@ -305,8 +331,17 @@ public class Standalone {
 		return highestEntry == null ? null : highestEntry.getKey();
 	}
 
-	public static void main(String[] args) throws Exception {
+	/**
+	 * Starts the stand alone GUI of the rapla 2 excel converter.
+	 * 
+	 * @param args The arguments are not used
+	 */
+	public static void main(String[] args) {
 		Standalone standalone = new Standalone();
-		standalone.export();
+		try {
+			standalone.export();
+		} catch (IOException e) {
+			standalone.getStandaloneFrame().addTextLine(e.getMessage());
+		}
 	}
 }

@@ -6,9 +6,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -16,6 +19,7 @@ import org.apache.poi.xssf.usermodel.DefaultIndexedColorMap;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -50,6 +54,18 @@ public final class ApachePOIWrapper {
 	public static XSSFWorkbook loadWorkbookFromFile(File file) throws IOException {
 		FileInputStream excelFile = new FileInputStream(file);
 		XSSFWorkbook workbook = new XSSFWorkbook(excelFile);
+		return workbook;
+	}
+
+	/**
+	 * Returns the workbook of the given input stream.
+	 * 
+	 * @param inputStream The input stream of the workbook
+	 * @return The workbook of the given file
+	 * @throws IOException If reading the workbook failed
+	 */
+	public static XSSFWorkbook loadWorkbookFromInputStream(InputStream inputStream) throws IOException {
+		XSSFWorkbook workbook = new XSSFWorkbook(inputStream);
 		return workbook;
 	}
 
@@ -104,12 +120,44 @@ public final class ApachePOIWrapper {
 	}
 
 	/**
-	 * Returns an array of all values from a cell range. Cells with no value will
-	 * not be added to the array.
+	 * Returns a map of font colors from a cell range. All cells with a value in the
+	 * cell range will be added to the map with their font color.
 	 * 
 	 * @param sheet     The sheet, which will be scanned
 	 * @param cellRange The cell range, which will be scanned
-	 * @return An array of cell values
+	 * @return A map of cell values and font color pairs
+	 */
+	public static Map<String, XSSFFont> getMappedFontColor(XSSFSheet sheet, CellRangeAddress cellRange) {
+		Map<String, XSSFFont> fontMap = new HashMap<String, XSSFFont>();
+		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {
+			XSSFRow row = sheet.getRow(rowNum);
+			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
+				XSSFCell cell = row.getCell(columnNum);
+				if (cell != null) {
+					String key = cell.getStringCellValue();
+					if (key != null && key != "") {
+						XSSFFont font = new XSSFFont();
+						font.setFontHeight((short) 200);
+						font.setFontName("Arial");
+						font.setColor(cell.getCellStyle().getFont().getXSSFColor());
+						fontMap.put(key, font);
+					}
+				}
+			}
+
+		}
+		return fontMap;
+	}
+
+	/**
+	 * Returns an array of all string values from a cell range.
+	 * 
+	 * Cells with no value or an invalid string value will not be added to the
+	 * array.
+	 * 
+	 * @param sheet     The sheet, which will be scanned
+	 * @param cellRange The cell range, which will be scanned
+	 * @return An array of cell string values
 	 */
 	public static String[] getStringValuesFromWorkbook(XSSFSheet sheet, CellRangeAddress cellRange) {
 		List<String> valueList = new ArrayList<String>();
@@ -128,6 +176,54 @@ public final class ApachePOIWrapper {
 		return valueList.toArray(new String[valueList.size()]);
 	}
 
+	/**
+	 * Returns an array of all numeric values from a cell range.
+	 * 
+	 * Cells with no value or an invalid numeric value will not be added to the
+	 * array. Cells floating point numbers are casted to integers. This means all
+	 * digits behind the point are cut off.
+	 * 
+	 * @param sheet     The sheet, which will be scanned
+	 * @param cellRange The cell range, which will be scanned
+	 * @return An array of cell integer values
+	 */
+	public static int[] getIntegerValuesFromWorkbook(XSSFSheet sheet, CellRangeAddress cellRange) {
+		List<Integer> valueList = new ArrayList<Integer>();
+		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {
+			XSSFRow row = sheet.getRow(rowNum);
+			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
+				XSSFCell cell = row.getCell(columnNum);
+				if (cell != null) {
+					if (cell.getCellType() == CellType.NUMERIC) {
+						int value = (int) cell.getNumericCellValue();
+						valueList.add(value);
+					} else if (cell.getCellType() == CellType.STRING) {
+						try {
+							int value = (int) Double.parseDouble(cell.getStringCellValue());
+							valueList.add(value);
+						} catch (NumberFormatException e) {
+
+						}
+					}
+				}
+			}
+		}
+		int[] valueArray = new int[valueList.size()];
+		for (int i = 0; i < valueArray.length; i++) {
+			valueArray[i] = valueList.get(i);
+		}
+		return valueArray;
+	}
+
+	/**
+	 * Returns an array of all date values from a cell range.
+	 * 
+	 * Cells with no value or an invalid date value will not be added to the array.
+	 * 
+	 * @param sheet     The sheet, which will be scanned
+	 * @param cellRange The cell range, which will be scanned
+	 * @return An array of cell date values
+	 */
 	public static Date[] getDateValuesFromWorkbook(XSSFSheet sheet, CellRangeAddress cellRange) {
 		List<Date> valueList = new ArrayList<Date>();
 		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {

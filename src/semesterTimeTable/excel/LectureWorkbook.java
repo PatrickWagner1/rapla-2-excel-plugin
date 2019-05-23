@@ -3,6 +3,7 @@ package semesterTimeTable.excel;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -139,8 +140,8 @@ public class LectureWorkbook {
 		if (file.exists()) {
 			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromFile(file));
 		} else {
-			this.setWorkbook(ApachePOIWrapper
-					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(LectureWorkbook.TEMPLATE_FILENAME)));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromInputStream(
+					LectureWorkbook.getTemplateInputStream(LectureWorkbook.TEMPLATE_FILENAME)));
 		}
 		this.setBorderLists();
 		this.createBorderStyles();
@@ -476,16 +477,38 @@ public class LectureWorkbook {
 		return this.quarterEndDate;
 	}
 
+	/**
+	 * Calculates and sets the start and end date of the quarter from the given week
+	 * of year and year.
+	 * 
+	 * @param weekOfYear The start week of the quarter
+	 * @param year       The year of the quarter
+	 * @param timeZone   The time zone for the start and end date
+	 */
 	private void setBorderDates(int weekOfYear, int year, TimeZone timeZone) {
 		this.quarterStartDate = LectureWorkbook.weekOfYearToDate(weekOfYear, Calendar.MONDAY, year, timeZone);
 		this.quarterEndDate = LectureWorkbook.weekOfYearToDate(weekOfYear + 11, Calendar.SATURDAY, year, timeZone);
 		this.addHolidays();
 	}
 
+	/**
+	 * Calculates and sets the start and end date of the quarter from the given
+	 * date. The date can be any date in the first week of the quarter.
+	 * 
+	 * @param date Any date in the first week of the quarter
+	 */
 	public void setBorderDatesWithDateInFirstWeek(Calendar date) {
 		this.setBorderDates(date.get(Calendar.WEEK_OF_YEAR), date.get(Calendar.YEAR), date.getTimeZone());
 	}
 
+	/**
+	 * Calculates and sets the start and end date of the quarter from the given
+	 * date. The date can be any date in the quarter. The quarter start weeks of the
+	 * configuration file are used to get the first week of the quarter for the
+	 * given date.
+	 * 
+	 * @param date Any date in the quarter
+	 */
 	public void setBorderDatesWithDateInQuarter(Calendar date) {
 		int[] quarterStartWeeks = this.getConfigWorkbook().getQuarterStartWeeks();
 		int week = date.get(Calendar.WEEK_OF_YEAR);
@@ -705,12 +728,12 @@ public class LectureWorkbook {
 
 	/**
 	 * Returns the color array of the given name from the color map. If the name
-	 * does not match a color map key, then null is returned.
+	 * does not match lecture properties key, then null is returned.
 	 *
 	 * The name can contain a '*' as a wildcard.
 	 * 
 	 * @param name                 The name for matching a key
-	 * @param lecturePropertiesMap A map of a color array
+	 * @param lecturePropertiesMap A map of lecture properties
 	 * @return The color array of the name from the color map, or null if name not
 	 *         matches a color map key
 	 */
@@ -915,13 +938,13 @@ public class LectureWorkbook {
 	}
 
 	/**
-	 * Returns the template file of a given filename. The template file is stored
-	 * inside the root source folder of this class.
+	 * Returns the input stream of a template file of a given filename. The template
+	 * file is stored inside the root source folder of this class.
 	 * 
 	 * @param filename The filename for a template file
-	 * @return The template file of the filename
+	 * @return The input stream of the filename
 	 */
-	public static File getTemplateFile(String filename) {
-		return new File(LectureWorkbook.class.getClassLoader().getResource(filename).getFile());
+	public static InputStream getTemplateInputStream(String filename) {
+		return LectureWorkbook.class.getClassLoader().getResourceAsStream(filename);
 	}
 }

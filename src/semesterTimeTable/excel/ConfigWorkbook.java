@@ -2,7 +2,6 @@ package semesterTimeTable.excel;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -42,24 +41,34 @@ public class ConfigWorkbook {
 	 */
 	private String[] ignorePrefixes;
 
+	/** The locale for the holidays */
 	private Locale holidayLocale;
 
+	/** An array of start weeks of quarters */
 	private int[] quarterStartWeeks;
 
+	/** The length of the exam week */
 	private int examWeekLength;
 
+	/** The start date of the quarter */
 	private Calendar quarterStartDate;
 
+	/** The text for the box on the bottom of the exam week */
 	private XSSFRichTextString examWeekText;
 
+	/** The font for the box on the bottom of the exam week */
 	private XSSFFont examWeekFont;
 
+	/** The fill color for the box on the bottom of the exam week */
 	private XSSFColor examWeekFillColor;
 
+	/** The workbook containing the configurations */
 	private XSSFWorkbook workbook;
 
+	/** The file of the workbook containing the configurations */
 	private File file;
 
+	/** The status, if the configuration file was recreated or not */
 	private boolean isNewConfig;
 
 	/**
@@ -69,7 +78,7 @@ public class ConfigWorkbook {
 	 */
 	public ConfigWorkbook() throws IOException {
 		this.setWorkbook(ApachePOIWrapper
-				.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
+				.loadWorkbookFromInputStream(LectureWorkbook.getTemplateInputStream(ConfigWorkbook.TEMPLATE_FILENAME)));
 		this.initConfigWorkbook();
 		this.setIsNewConfig(false);
 	}
@@ -91,8 +100,8 @@ public class ConfigWorkbook {
 			this.initConfigWorkbook();
 			this.setIsNewConfig(false);
 		} else {
-			this.setWorkbook(ApachePOIWrapper
-					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromInputStream(
+					LectureWorkbook.getTemplateInputStream(ConfigWorkbook.TEMPLATE_FILENAME)));
 			this.initConfigWorkbook(file);
 			this.setIsNewConfig(true);
 		}
@@ -124,8 +133,8 @@ public class ConfigWorkbook {
 			this.initConfigWorkbook();
 			this.setIsNewConfig(false);
 		} else {
-			this.setWorkbook(ApachePOIWrapper
-					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromInputStream(
+					LectureWorkbook.getTemplateInputStream(ConfigWorkbook.TEMPLATE_FILENAME)));
 			this.initConfigWorkbook(file, lectureNames);
 			this.setIsNewConfig(true);
 		}
@@ -148,8 +157,8 @@ public class ConfigWorkbook {
 			this.initConfigWorkbook();
 			this.setIsNewConfig(false);
 		} else {
-			this.setWorkbook(ApachePOIWrapper
-					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromInputStream(
+					LectureWorkbook.getTemplateInputStream(ConfigWorkbook.TEMPLATE_FILENAME)));
 			this.initConfigWorkbook(file);
 			this.setIsNewConfig(true);
 		}
@@ -182,29 +191,55 @@ public class ConfigWorkbook {
 			this.initConfigWorkbook();
 			this.setIsNewConfig(false);
 		} else {
-			this.setWorkbook(ApachePOIWrapper
-					.loadWorkbookFromFile(LectureWorkbook.getTemplateFile(ConfigWorkbook.TEMPLATE_FILENAME)));
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromInputStream(
+					LectureWorkbook.getTemplateInputStream(ConfigWorkbook.TEMPLATE_FILENAME)));
 			this.initConfigWorkbook(file, lectureNames);
 			this.setIsNewConfig(true);
 		}
 	}
 
+	/**
+	 * Returns the workbook containing the configurations.
+	 * 
+	 * @return The configuration workbook
+	 */
 	private XSSFWorkbook getWorkbook() {
 		return this.workbook;
 	}
 
+	/**
+	 * Sets the workbook containing the configurations.
+	 * 
+	 * @param workbook The configuration workbook
+	 */
 	private void setWorkbook(XSSFWorkbook workbook) {
 		this.workbook = workbook;
 	}
 
+	/**
+	 * Returns true if the configuration file was recreated, otherwise false.
+	 * 
+	 * @return True if the configuration file was recreated, otherwise false
+	 */
 	public boolean isNewConfig() {
 		return this.isNewConfig;
 	}
 
+	/**
+	 * Sets the status if the configuration file was recreated or not.
+	 * 
+	 * @param isNewConfig True if the configuration file was recreated, otherwise
+	 *                    false
+	 */
 	private void setIsNewConfig(boolean isNewConfig) {
 		this.isNewConfig = isNewConfig;
 	}
 
+	/**
+	 * Returns a map of the lecture properties.
+	 * 
+	 * @return A map of the lecture properties
+	 */
 	public Map<String, LectureProperties> getLecturePropertiesMap() {
 		return this.lecturePropertiesMap;
 	}
@@ -227,17 +262,32 @@ public class ConfigWorkbook {
 		return this.ignorePrefixes;
 	}
 
-	private void setIgnorePrefixes(XSSFSheet sheet) {
+	/**
+	 * Sets the ignore prefixes contained in the zero based column 3 in the first
+	 * sheet of the workbook.
+	 */
+	private void setIgnorePrefixes() {
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
 		this.ignorePrefixes = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
 				new CellRangeAddress(2, lastRowNum, 3, 3));
 	}
 
+	/**
+	 * Returns the locale for the holidays.
+	 * 
+	 * @return The locale for the holidays
+	 */
 	public Locale getHolidayLocale() {
 		return this.holidayLocale;
 	}
 
-	private void setHolidayLocale(XSSFSheet sheet) {
+	/**
+	 * Sets the locale for the holidays contained in the zero based column 4 in the
+	 * first sheet of the workbook.
+	 */
+	private void setHolidayLocale() {
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
 		String[] localeValues = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
 				new CellRangeAddress(2, lastRowNum, 4, 4));
@@ -258,13 +308,23 @@ public class ConfigWorkbook {
 		}
 	}
 
+	/**
+	 * Returns an array of all start weeks of quarters.
+	 * 
+	 * @return The start weeks of quarters
+	 */
 	public int[] getQuarterStartWeeks() {
 		return this.quarterStartWeeks;
 	}
 
-	private void setQuarterStartWeeks(XSSFSheet sheet) {
+	/**
+	 * Sets the start weeks of quarters contained in the zero based column 5 in the
+	 * first sheet of the workbook.
+	 */
+	private void setQuarterStartWeeks() {
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
-		int[] quarterStartWeeks = ConfigWorkbook.getIntegerValuesFromWorkbook(sheet,
+		int[] quarterStartWeeks = ApachePOIWrapper.getIntegerValuesFromWorkbook(sheet,
 				new CellRangeAddress(2, lastRowNum, 5, 5));
 		if (quarterStartWeeks.length < 1) {
 			quarterStartWeeks = new int[] { 2, 15, 27, 40 };
@@ -272,16 +332,30 @@ public class ConfigWorkbook {
 		this.quarterStartWeeks = quarterStartWeeks;
 	}
 
+	/**
+	 * Returns the length of the exam week. Only Monday to Friday counts as days.
+	 * 
+	 * @return The length of the exam week
+	 */
 	public int getExamWeekLength() {
 		return this.examWeekLength;
 	}
 
-	private void setExamWeekLength(XSSFSheet sheet) {
-		int[] lengths = ConfigWorkbook.getIntegerValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 6, 6));
+	/**
+	 * Sets the length of the exam week contained in the zero based row 2 in the
+	 * zero based column 6 in the first sheet of the workbook.
+	 * 
+	 * If the value is smaller than zero, the length will be zero. If the value is
+	 * higher than ten, the length will be ten. If the value is not a number, the
+	 * default length of six will be used.
+	 */
+	private void setExamWeekLength() {
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
+		int[] lengths = ApachePOIWrapper.getIntegerValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 6, 6));
 		if (lengths.length == 1) {
 			if (lengths[0] < 0) {
 				this.examWeekLength = 0;
-			} else if(lengths[0] > 10) {
+			} else if (lengths[0] > 10) {
 				this.examWeekLength = 10;
 			} else {
 				this.examWeekLength = lengths[0];
@@ -291,11 +365,26 @@ public class ConfigWorkbook {
 		}
 	}
 
+	/**
+	 * Returns the start date of the quarter.
+	 * 
+	 * @return The start date of the quarter
+	 */
 	public Calendar getQuarterStartDate() {
 		return this.quarterStartDate;
 	}
 
-	private void setQuarterStartDate(XSSFSheet sheet) {
+	/**
+	 * Sets the start date of the quarter contained in the zero based column 7 in
+	 * the first sheet of the workbook.
+	 * 
+	 * The value in the zero based row 2 is the start date for the quarter and the
+	 * zero based row 3 is the ID for the time zone which should be used for the
+	 * start date. If no time zone is set, the time zone with the id "GMT" will be
+	 * used as default.
+	 */
+	private void setQuarterStartDate() {
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		Date[] dates = ApachePOIWrapper.getDateValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 7, 7));
 		String[] timeZoneCodes = ApachePOIWrapper.getStringValuesFromWorkbook(sheet, new CellRangeAddress(3, 3, 7, 7));
 
@@ -315,19 +404,40 @@ public class ConfigWorkbook {
 		}
 	}
 
+	/**
+	 * Returns the text for the box at the bottom of the exam week.
+	 * 
+	 * @return The text for the exam week box
+	 */
 	public XSSFRichTextString getExamWeekText() {
 		return this.examWeekText;
 	}
 
+	/**
+	 * Returns the font for the box at the bottom of the exam week.
+	 * 
+	 * @return The font for the exam week box
+	 */
 	public XSSFFont getExamWeekFont() {
 		return this.examWeekFont;
 	}
 
+	/**
+	 * Returns the fill color for the box at the bottom of the exam week.
+	 * 
+	 * @return The fill color for the exam week box
+	 */
 	public XSSFColor getExamWeekFillColor() {
 		return this.examWeekFillColor;
 	}
 
-	private void setExamWeekTextAndStyle(XSSFSheet sheet) {
+	/**
+	 * Sets the text, font and fill color for the box at the bottom of the exam
+	 * week. The text and styles are contained in the zero based row 2 in the zero
+	 * based column 8 in the first sheet of the workbook.
+	 */
+	private void setExamWeekTextAndStyle() {
+		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		XSSFRow row = sheet.getRow(2);
 		if (row != null) {
 			XSSFCell cell = row.getCell(8);
@@ -345,14 +455,29 @@ public class ConfigWorkbook {
 		}
 	}
 
+	/**
+	 * Closes the workbook containing the configurations.
+	 * 
+	 * @throws IOException If closing the workbook failed
+	 */
 	public void close() throws IOException {
 		this.getWorkbook().close();
 	}
 
+	/**
+	 * Returns the file of the workbook containing the configurations.
+	 * 
+	 * @return The file of the configuration workbook
+	 */
 	private File getFile() {
 		return this.file;
 	}
 
+	/**
+	 * Sets the file of the workbook containing the configurations.
+	 * 
+	 * @param file The file for the configuration workbook
+	 */
 	private void setFile(File file) {
 		this.file = file;
 	}
@@ -361,14 +486,12 @@ public class ConfigWorkbook {
 	 * Creates a new configuration file with the configuration template and the
 	 * given lectures and sets all the configurable variables.
 	 * 
-	 * All lecture names starts with the {@link ConfigWorkbook#REMOVE_PREFIX} are
-	 * not added to the configuration file.
+	 * Only new Lecture names are added to the configuration file.
 	 * 
 	 * All lecture names starts with the {@link ConfigWorkbook#ignorePrefixes} are
 	 * added without the prefix. If there exists a lecture name with this new name,
 	 * it is not added.
 	 * 
-	 * @param workbook     The template configuration workbook
 	 * @param file         The file to save the configuration workbook into
 	 * @param lectureNames A list of lecture names
 	 * @throws IOException If saving the configuration workbook or closing the
@@ -379,6 +502,14 @@ public class ConfigWorkbook {
 		this.initConfigWorkbook(file);
 	}
 
+	/**
+	 * Creates a new configuration file with the configuration template and the
+	 * given lectures and sets all the configurable variables.<
+	 * 
+	 * @param file The file to save the configuration workbook into
+	 * @throws IOException If saving the configuration workbook or closing the
+	 *                     workbook failed
+	 */
 	private void initConfigWorkbook(File file) throws IOException {
 		this.setFile(file);
 		ApachePOIWrapper.saveWorkbookToFile(this.getWorkbook(), file);
@@ -397,23 +528,34 @@ public class ConfigWorkbook {
 		int lastRowNum = sheet.getLastRowNum();
 		this.lecturePropertiesMap = ConfigWorkbook.getMappedLectureProperties(sheet,
 				new CellRangeAddress(rowNum, lastRowNum, 0, 1));
-		this.highlightedFonts = ConfigWorkbook.getMappedFontColor(sheet,
+		this.highlightedFonts = ApachePOIWrapper.getMappedFontColor(sheet,
 				new CellRangeAddress(rowNum, lastRowNum, 2, 2));
-		this.setIgnorePrefixes(sheet);
-		this.setHolidayLocale(sheet);
-		this.setQuarterStartWeeks(sheet);
-		this.setExamWeekLength(sheet);
-		this.setQuarterStartDate(sheet);
-		this.setExamWeekTextAndStyle(sheet);
+		this.setIgnorePrefixes();
+		this.setHolidayLocale();
+		this.setQuarterStartWeeks();
+		this.setExamWeekLength();
+		this.setQuarterStartDate();
+		this.setExamWeekTextAndStyle();
 	}
 
+	/**
+	 * Adds all new lecture names of the given list in the zero based row 0 in the
+	 * first sheet of the workbook.
+	 * 
+	 * All lecture names starts with the {@link ConfigWorkbook#ignorePrefixes} are
+	 * added without the prefix. If there exists a lecture name with this new name,
+	 * it is not added.
+	 * 
+	 * @param lectureNames List of lecture names to add to the workbook
+	 * @throws IOException If saving the workbook file failed
+	 */
 	public void addLectureNames(List<String> lectureNames) throws IOException {
 		int rowNum = 2;
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
 		String[] namesToColor = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
 				new CellRangeAddress(rowNum, lastRowNum, 0, 0));
-		this.setIgnorePrefixes(sheet);
+		this.setIgnorePrefixes();
 
 		for (String lectureName : lectureNames) {
 			String rawLectureName = LectureWorkbook.removePrefixFromString(lectureName, this.getIgnorePrefixes());
@@ -477,65 +619,15 @@ public class ConfigWorkbook {
 	}
 
 	/**
-	 * Returns a map of font colors from a cell range. All cells with a value in the
-	 * cell range will be added to the map with their font color.
+	 * Adds a value in the given sheet in the given column in the first cell, which
+	 * is empty or is not a string value.
 	 * 
-	 * @param sheet     The sheet, which will be scanned
-	 * @param cellRange The cell range, which will be scanned
-	 * @return A map of cell values and font color pairs
+	 * @param sheet       The sheet, where the value is added to
+	 * @param value       The value to add
+	 * @param startRowNum The first possible row, where the value is added to
+	 * @param columnNum   The column, where the value is added to
+	 * @return The row number, where the value was inserted
 	 */
-	public static Map<String, XSSFFont> getMappedFontColor(XSSFSheet sheet, CellRangeAddress cellRange) {
-		Map<String, XSSFFont> fontMap = new HashMap<String, XSSFFont>();
-		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {
-			XSSFRow row = sheet.getRow(rowNum);
-			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
-				XSSFCell cell = row.getCell(columnNum);
-				if (cell != null) {
-					String key = cell.getStringCellValue();
-					if (key != null && key != "") {
-						XSSFFont font = new XSSFFont();
-						font.setFontHeight((short) 200);
-						font.setFontName("Arial");
-						font.setColor(cell.getCellStyle().getFont().getXSSFColor());
-						fontMap.put(key, font);
-					}
-				}
-			}
-
-		}
-		return fontMap;
-		// TODO move to ApachePOIWrapper? Generalize variable names
-	}
-
-	public static int[] getIntegerValuesFromWorkbook(XSSFSheet sheet, CellRangeAddress cellRange) {
-		List<Integer> valueList = new ArrayList<Integer>();
-		for (int rowNum = cellRange.getFirstRow(); rowNum <= cellRange.getLastRow(); rowNum++) {
-			XSSFRow row = sheet.getRow(rowNum);
-			for (int columnNum = cellRange.getFirstColumn(); columnNum <= cellRange.getLastColumn(); columnNum++) {
-				XSSFCell cell = row.getCell(columnNum);
-				if (cell != null) {
-					if (cell.getCellType() == CellType.NUMERIC) {
-						int value = (int) cell.getNumericCellValue();
-						valueList.add(value);
-					} else if (cell.getCellType() == CellType.STRING) {
-						try {
-							int value = (int) Double.parseDouble(cell.getStringCellValue());
-							valueList.add(value);
-						} catch (NumberFormatException e) {
-
-						}
-					}
-				}
-			}
-		}
-		int[] valueArray = new int[valueList.size()];
-		for (int i = 0; i < valueArray.length; i++) {
-			valueArray[i] = valueList.get(i);
-		}
-		return valueArray;
-		// TODO move to ApachePOIWrapper? Generalize variable names
-	}
-
 	public static int addValueToNextEmptyCellInARow(XSSFSheet sheet, String value, int startRowNum, int columnNum) {
 		boolean added = false;
 		while (!added) {
@@ -553,6 +645,14 @@ public class ConfigWorkbook {
 		return startRowNum;
 	}
 
+	/**
+	 * Returns True if the name matches one of the strings in the matchers array,
+	 * otherwise false. The matchers strings can contain wildcards ('*').
+	 * 
+	 * @param name     The name to check for possible matches
+	 * @param matchers The array of matchers
+	 * @return True if the name matches one of the matchers, otherwise false
+	 */
 	public static boolean arrayContainsWithWildcard(String name, String[] matchers) {
 		boolean matches = false;
 		for (String matcher : matchers) {

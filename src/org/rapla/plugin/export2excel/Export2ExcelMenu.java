@@ -44,11 +44,20 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	String id = "export_file_text";
 	JMenuItem item;
 
+	/** Line break character */
 	private static final String LINE_BREAK = "\n";
+
+	/** Cell break character */
 	private static final String CELL_BREAK = ";";
 
+	/** File extension for excel files */
 	private static final String FILE_EXTENSION = "xlsx";
 
+	/**
+	 * Creates the export menu for the export to excel plugin.
+	 * 
+	 * @param sm The rapla context
+	 */
 	public Export2ExcelMenu(RaplaContext sm) {
 		super(sm);
 		setChildBundleName(Export2ExcelPlugin.RESOURCE_FILE);
@@ -60,7 +69,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	/**
 	 * Event handler for clicking on the export to excel menu entry.
 	 * 
-	 * @param evt
+	 * @param evt The action event
 	 */
 	public void actionPerformed(ActionEvent evt) {
 		try {
@@ -73,7 +82,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	/**
 	 * Getter method for the id of the menu.
 	 * 
-	 * @return id
+	 * @return id The id for the menu
 	 */
 	public String getId() {
 		return this.id;
@@ -82,7 +91,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	/**
 	 * Getter method for the menu item.
 	 * 
-	 * @return item
+	 * @return The menu item
 	 */
 	public JMenuItem getMenuElement() {
 		return this.item;
@@ -93,9 +102,11 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	 * event handler for clicking on the export menu entry.
 	 * 
 	 * @param model The calendar selection model
-	 * @throws Exception
+	 * @throws IOException           If saving or loading a workbook fails
+	 * @throws RaplaException
+	 * @throws RaplaContextException
 	 */
-	public void export() throws Exception {
+	public void export() throws IOException, RaplaContextException, RaplaException {
 		CalendarSelectionModel preModel = getService(CalendarSelectionModel.class);
 		String mostCommonClassName = this.getMostCommonClassName(preModel);
 		String filename = this.getDefaultFileName(mostCommonClassName);
@@ -122,7 +133,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			List<Lecture> lectures = this.getLecturesFromRaplaModel(model);
 
 			lectureWorkbook.setLectures(lectures);
-			this.saveFile(lectureWorkbook, path);
+			lectureWorkbook.saveToFile(path);
 			this.exportFinished(getMainComponent());
 		}
 	}
@@ -145,24 +156,6 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 			return true;
 		}
 
-	}
-
-	/**
-	 * Saves the lectures as a workbook under the given filename. If there exists a
-	 * file with the given filename, it is used as custom template workbook for the
-	 * lectures. Otherwise the standard template workbook is used.
-	 * 
-	 * @param filename         The name for the file
-	 * @param quarterStartDate The included start date of the quarter
-	 * @param lectures         a list of lectures
-	 * @throws RaplaException If loading or saving the file fails
-	 */
-	public void saveFile(LectureWorkbook lectureWorkbook, String filename) throws RaplaException {
-		try {
-			lectureWorkbook.saveToFile(filename);
-		} catch (IOException e) {
-			throw new RaplaException(e.getMessage(), e);
-		}
 	}
 
 	/**
@@ -226,6 +219,15 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		return lecturesTitle + "." + Export2ExcelMenu.FILE_EXTENSION;
 	}
 
+	/**
+	 * Extracts a collection of rapla table column objects from the given calendar
+	 * selection model.
+	 * 
+	 * @param model The calendar selection model
+	 * @return A collection of rapla table column objects
+	 * @throws RaplaContextException
+	 * @throws RaplaException
+	 */
 	private Collection<? extends RaplaTableColumn<?>> getColumnsFromModel(CalendarSelectionModel model)
 			throws RaplaContextException, RaplaException {
 		Collection<? extends RaplaTableColumn<?>> columns;
@@ -235,6 +237,14 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		return columns;
 	}
 
+	/**
+	 * Extracts a list of raw lecture objects from the given calendar selection
+	 * model.
+	 * 
+	 * @param model The calendar selection model
+	 * @return A list of raw lecture objects
+	 * @throws RaplaException
+	 */
 	private List<Object> getObjectsFromModel(CalendarSelectionModel model) throws RaplaException {
 		final List<AppointmentBlock> blocks = model.getBlocks();
 		List<Object> objects = new ArrayList<Object>();
@@ -243,14 +253,12 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	}
 
 	/**
-	 * Converts a list of rapla objects into a list of lectures and sets the most
-	 * common class name from the lectures.
+	 * Extracts a list of lectures from the given calendar selection model.
 	 * 
-	 * @param objects The rapla objects
-	 * @param columns The rapla columns
+	 * @param model The calendar selection model
 	 * @return A list of lectures
-	 * @throws RaplaException
 	 * @throws RaplaContextException
+	 * @throws RaplaException
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private List<Lecture> getLecturesFromRaplaModel(CalendarSelectionModel model)
@@ -309,6 +317,16 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		return lectures;
 	}
 
+	/**
+	 * Extracts the most common class name from the given calendar selection model.
+	 * 
+	 * The class names are all resources except rooms.
+	 * 
+	 * @param model The calendar selection model
+	 * @return The most common class name
+	 * @throws RaplaContextException
+	 * @throws RaplaException
+	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private String getMostCommonClassName(CalendarSelectionModel model) throws RaplaContextException, RaplaException {
 		Collection<? extends RaplaTableColumn<?>> columns = this.getColumnsFromModel(model);
@@ -341,6 +359,13 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 		return getHighestCountKey(classNames);
 	}
 
+	/**
+	 * Checks if the given resource name matches the regular expression for a room.
+	 * If the name does NOT contains 3 upper case letters followed by two digits.
+	 * 
+	 * @param resourceName The name to check if it is a room name
+	 * @return True if the given name is a room name, otherwise false.
+	 */
 	public static boolean resourceIsRoom(String resourceName) {
 		return !resourceName.matches(".*\\p{Upper}{3}\\d{2}.*");
 	}
