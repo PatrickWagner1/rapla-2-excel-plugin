@@ -8,6 +8,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
@@ -572,6 +573,179 @@ public class LectureWorkbook {
 	}
 
 	/**
+	 * Gets the cell ranges for the lectures and map them to the lectures. The cell
+	 * range will be varying for parallel lectures.
+	 * 
+	 * For more details how the cell ranges for parallel lectures will be handled,
+	 * see {@link LectureWorkbook#adjustOverlappingCellRanges(List)}.
+	 * 
+	 * @see LectureWorkbook#adjustOverlappingCellRanges(List)
+	 * @param groupedLectures The map of grouped lectures
+	 * @return A map of grouped lectures mapped to their cell range
+	 */
+	private Map<String, Map<Lecture, CellRangeAddress>> mapCellRangesForParallelLectures(
+			Map<String, List<Lecture>> groupedLectures) {
+
+		Map<String, Map<Lecture, CellRangeAddress>> groupedLecturesCellRangeMap = new TreeMap<String, Map<Lecture, CellRangeAddress>>();
+		Calendar quarterStartDate = this.getQuarterStartDate();
+
+		List<CellRangeAddress> cellRanges = new ArrayList<CellRangeAddress>();
+
+		for (Entry<String, List<Lecture>> lectureListEntry : groupedLectures.entrySet()) {
+			Map<Lecture, CellRangeAddress> lectureCellRangeMap = new HashMap<Lecture, CellRangeAddress>();
+			for (Lecture lecture : lectureListEntry.getValue()) {
+				CellRangeAddress cellRange = LectureWorkbook.getCellRangeFromLecture(quarterStartDate, lecture);
+				lectureCellRangeMap.put(lecture, cellRange);
+				cellRanges.add(cellRange);
+			}
+			groupedLecturesCellRangeMap.put(lectureListEntry.getKey(), lectureCellRangeMap);
+		}
+
+		LectureWorkbook.adjustCellRanges(cellRanges);
+
+		return groupedLecturesCellRangeMap;
+	}
+
+	/**
+	 * Adjusts overlapping cell ranges in the cell range list.
+	 * 
+	 * If there are two lectures with overlapping start and/or end date, each
+	 * lecture gets generally the half of the total cell range of both lectures. But
+	 * the cell range of each lecture cannot decrease. So if one lecture cell range
+	 * is smaller than the total cell range, the other lecture cell range will
+	 * decrease for the remaining cell range space.
+	 * 
+	 * @param cellRanges The list of cell ranges to adjust
+	 */
+	private static void adjustCellRanges(List<CellRangeAddress> cellRanges) {
+		List<CellRangeAddress> cellRangeList = new ArrayList<>(cellRanges);
+
+		int cellRangeListSize = cellRangeList.size();
+		while (cellRangeListSize > 0) {
+			int lastCellRangeInList = cellRangeListSize - 1;
+			CellRangeAddress cellRange = cellRangeList.get(lastCellRangeInList);
+			cellRangeList.remove(lastCellRangeInList);
+
+			List<CellRangeAddress> overlapCellRanges = new ArrayList<CellRangeAddress>();
+			overlapCellRanges.addAll(LectureWorkbook.getRecursiveOverlapCellRanges(cellRange, cellRangeList));
+
+			if (overlapCellRanges.size() > 0) {
+				overlapCellRanges.add(cellRange);
+				LectureWorkbook.adjustOverlappingCellRanges(overlapCellRanges);
+			}
+
+			cellRangeListSize = cellRangeList.size();
+		}
+	}
+
+	/**
+	 * Returns a list of all cell ranges from the given cell range list, which
+	 * overlaps the given cell range and all overlapping cell ranges.
+	 * 
+	 * @param cellRange     The cell range for checking overlapping cell ranges
+	 * @param cellRangeList The list of possible overlapping cell ranges
+	 * @return A list of all overlapping cell ranges
+	 */
+	private static List<CellRangeAddress> getRecursiveOverlapCellRanges(CellRangeAddress cellRange,
+			List<CellRangeAddress> cellRangeList) {
+		return LectureWorkbook.getRecursiveOverlapCellRanges(cellRange, cellRangeList, cellRangeList.size() - 1);
+	}
+
+	/**
+	 * Returns a list of all cell ranges from the given cell range list, which
+	 * overlaps the given cell range and all overlapping cell ranges.
+	 * 
+	 * @param cellRange          The cell range for checking overlapping cell ranges
+	 * @param cellRangeList      The list of possible overlapping cell ranges
+	 * @param lastCellRangeIndex The index of the last cell range, which should be
+	 *                           checked
+	 * @return A list of all overlapping cell ranges
+	 */
+	private static List<CellRangeAddress> getRecursiveOverlapCellRanges(CellRangeAddress cellRange,
+			List<CellRangeAddress> cellRangeList, int lastCellRangeIndex) {
+
+		List<CellRangeAddress> overlapCellRanges = new ArrayList<CellRangeAddress>();
+
+		lastCellRangeIndex = lastCellRangeIndex < cellRangeList.size() ? lastCellRangeIndex : cellRangeList.size() - 1;
+
+		for (int index = lastCellRangeIndex; index >= 0; index--) {
+			CellRangeAddress otherCellRange = cellRangeList.get(index);
+
+			if (cellRange.intersects(otherCellRange)) {
+				cellRangeList.remove(index);
+				overlapCellRanges.addAll(
+						LectureWorkbook.getRecursiveOverlapCellRanges(otherCellRange, cellRangeList, index - 1));
+				overlapCellRanges.add(otherCellRange);
+			}
+		}
+
+		return overlapCellRanges;
+	}
+
+	/**
+	 * Adjusts overlapping cell ranges in the cell range list.
+	 * 
+	 * This is a helper method for {@link LectureWorkbook#adjustCellRanges(List)}.
+	 * Only use this method if you are sure, that all cell ranges are overlapping,
+	 * otherwise it can cause layout errors.
+	 * 
+	 * @param cellRanges The list of overlapping cell ranges to adjust
+	 */
+	private static void adjustOverlappingCellRanges(List<CellRangeAddress> cellRanges) {
+
+		cellRanges.sort((CellRangeAddress a, CellRangeAddress b) -> a.getFirstRow() - b.getFirstRow());
+
+		while (cellRanges.size() > 0) {
+			CellRangeAddress cellRange = cellRanges.get(0);
+
+			List<CellRangeAddress> overlapCellRanges = LectureWorkbook.getOverlapCellRanges(cellRange, cellRanges);
+			int totalCellRanges = overlapCellRanges.size();
+			if (totalCellRanges > 1) {
+				CellRangeAddress nextCellRange = overlapCellRanges.get(1);
+
+				int minRow = cellRange.getFirstRow();
+				int maxRow = Collections
+						.max(overlapCellRanges,
+								(CellRangeAddress a, CellRangeAddress b) -> a.getLastRow() - b.getLastRow())
+						.getLastRow();
+
+				int totalHeight = maxRow - minRow;
+				int possibleRangeHeight = totalHeight / totalCellRanges;
+				possibleRangeHeight = totalHeight % totalCellRanges > 1 ? possibleRangeHeight + 1 : possibleRangeHeight;
+
+				int rangeHeight = cellRange.getLastRow() - minRow;
+				int newRangeHeight = Math.min(rangeHeight, possibleRangeHeight);
+				int possibleLastRow = minRow + newRangeHeight;
+				int lastRow = Math.max(possibleLastRow, nextCellRange.getFirstRow() - 1);
+				cellRange.setLastRow(lastRow);
+				nextCellRange.setFirstRow(lastRow + 1);
+			}
+			cellRanges.remove(0);
+		}
+	}
+
+	/**
+	 * Returns a list of all cell ranges from the given cell range list, which
+	 * overlaps the given cell range.
+	 * 
+	 * @param cellRange     The cell range for checking overlapping cell ranges
+	 * @param cellRangeList The list of possible overlapping cell ranges
+	 * @return A list of all overlapping cell ranges
+	 */
+	private static List<CellRangeAddress> getOverlapCellRanges(CellRangeAddress cellRange,
+			List<CellRangeAddress> cellRangeList) {
+		List<CellRangeAddress> overlapCellRanges = new ArrayList<CellRangeAddress>();
+
+		for (CellRangeAddress otherCellRange : cellRangeList) {
+			if (cellRange.intersects(otherCellRange)) {
+				overlapCellRanges.add(otherCellRange);
+			}
+		}
+
+		return overlapCellRanges;
+	}
+
+	/**
 	 * Insert the lectures from the groupedLectures variable into the lecture area
 	 * of the workbook sheet.
 	 */
@@ -581,12 +755,12 @@ public class LectureWorkbook {
 		Map<String, XSSFFont> highlightedFonts = configWorkbook.getHighlightedFonts();
 		String[] ignorePrefixes = configWorkbook.getIgnorePrefixes();
 
-		List<Lecture> groupedLectureList;
-		String groupedLectureName;
+		Map<String, Map<Lecture, CellRangeAddress>> groupedLecturesCellRangeMap = this
+				.mapCellRangesForParallelLectures(this.getGroupedLectures());
 
-		for (Entry<String, List<Lecture>> groupedLecture : this.getGroupedLectures().entrySet()) {
-			groupedLectureList = groupedLecture.getValue();
-			groupedLectureName = groupedLecture.getKey();
+		for (Entry<String, Map<Lecture, CellRangeAddress>> groupedLecture : groupedLecturesCellRangeMap.entrySet()) {
+			Map<Lecture, CellRangeAddress> lectureCellRangeMap = groupedLecture.getValue();
+			String groupedLectureName = groupedLecture.getKey();
 
 			Map<XSSFFont, Integer[]> lectureNameFonts = LectureWorkbook.getTextHighlights(groupedLectureName,
 					highlightedFonts);
@@ -618,9 +792,11 @@ public class LectureWorkbook {
 			}
 			mainFont.setColor(fontColor);
 
-			for (Lecture lecture : groupedLectureList) {
+			for (Entry<Lecture, CellRangeAddress> lectureCellRangeEntry : lectureCellRangeMap.entrySet()) {
+				Lecture lecture = lectureCellRangeEntry.getKey();
 				lecture.setShortName(shortLectureName);
-				this.addLectureToWorkbook(cellStyle, mainFont, lectureNameFonts, lecture);
+				CellRangeAddress cellRange = lectureCellRangeEntry.getValue();
+				this.addLectureToWorkbook(cellRange, cellStyle, mainFont, lectureNameFonts, lecture);
 			}
 		}
 	}
@@ -632,17 +808,17 @@ public class LectureWorkbook {
 	 * where to add the font in the text. The array contains at index 0 the start
 	 * index (inclusive) and at index 1 the end index (exclusive).
 	 * 
+	 * @param cellRange        The cell range for the lecture
 	 * @param cellStyle        The style for the lecture
 	 * @param mainFont         The main font for the lecture
 	 * @param lectureNameFonts A map for highlighting areas of the lecture text
 	 * @param lecture          The lecture itself
 	 * @return true if inserting the lecture was successful, false otherwise
 	 */
-	private boolean addLectureToWorkbook(XSSFCellStyle cellStyle, XSSFFont mainFont,
+	private boolean addLectureToWorkbook(CellRangeAddress cellRange, XSSFCellStyle cellStyle, XSSFFont mainFont,
 			Map<XSSFFont, Integer[]> lectureNameFonts, Lecture lecture) {
 		boolean mergedSuccessful = false;
 		boolean addedSuccessful = false;
-		CellRangeAddress cellRange = getCellRangeFromLecture(this.getQuarterStartDate(), lecture);
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		if (cellRange != null) {
 			try {
@@ -658,7 +834,10 @@ public class LectureWorkbook {
 
 		if (mergedSuccessful) {
 			XSSFCell cell = sheet.getRow(cellRange.getFirstRow()).getCell(cellRange.getFirstColumn());
-			cell.setCellValue(lectureToRichText(mainFont, lectureNameFonts, lecture));
+			boolean modifiedCellRange = !cellRange
+					.equals(LectureWorkbook.getCellRangeFromLecture(this.getQuarterStartDate(), lecture));
+			cell.setCellValue(
+					LectureWorkbook.lectureToRichText(mainFont, lectureNameFonts, lecture, modifiedCellRange));
 			cell.setCellStyle(cellStyle);
 			addedSuccessful = true;
 		}
@@ -700,22 +879,24 @@ public class LectureWorkbook {
 	 * Converts a lecture to a rich text by adding the main font and highlighting
 	 * fonts.
 	 * 
-	 * @param mainFont         The main font for the lecture
-	 * @param lectureNameFonts A map for highlighting areas of the lecture text
-	 * @param lecture          The lecture itself
+	 * @param mainFont          The main font for the lecture
+	 * @param lectureNameFonts  A map for highlighting areas of the lecture text
+	 * @param lecture           The lecture itself
+	 * @param modifiedCellRange True if the cell range for the lecture has changed
+	 *                          (caused by parallel lectures), otherwise false
 	 * @return The lecture converted to a rich text
 	 */
 	private static XSSFRichTextString lectureToRichText(XSSFFont mainFont, Map<XSSFFont, Integer[]> lectureNameFonts,
-			Lecture lecture) {
+			Lecture lecture, boolean modifiedCellRange) {
 		String shortLectureName = lecture.getShortName();
 		String text = shortLectureName != null && shortLectureName != "" ? shortLectureName : lecture.getName();
-		text += LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getResources())
-				+ LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getLecturers());
-		if (!LectureWorkbook.hasLectureNormalTimeInterval(lecture)) {
+		if (modifiedCellRange || !LectureWorkbook.hasLectureNormalTimeInterval(lecture)) {
 			String startTime = LectureWorkbook.getTime(lecture.getStartDate());
 			String endTime = LectureWorkbook.getTime(lecture.getEndDate());
 			text += LectureWorkbook.LINE_BREAK + startTime + "-" + endTime;
 		}
+		text += LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getLecturers())
+				+ LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getResources());
 		// TODO move following lines to ApachePOIWrapper?
 		XSSFRichTextString richText = new XSSFRichTextString(text);
 		richText.applyFont(mainFont);
