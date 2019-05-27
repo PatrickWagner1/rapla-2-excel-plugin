@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -71,7 +70,7 @@ public class Standalone {
 		String csvFileName = this.loadFile();
 		if (csvFileName != null && csvFileName != "") {
 			standaloneFrame.addTextLine("Scanning CSV File...");
-			List<List<String>> rawLectureList = Standalone.CSVToTwoDimList(csvFileName, Standalone.CELL_BREAK, true);
+			List<String[]> rawLectureList = Standalone.CSVToTwoDimList(csvFileName, Standalone.CELL_BREAK, true);
 			String mostCommonClassName = this.getMostCommonClassName(rawLectureList);
 			String filename = this.getDefaultFileName(mostCommonClassName);
 			standaloneFrame.addTextLine("Waiting for excel file selection...");
@@ -182,7 +181,7 @@ public class Standalone {
 	 * @param rawLectureList the raw list of lectures
 	 * @return A list of lectures
 	 */
-	private List<Lecture> getLecturesFromRawLectureList(List<List<String>> rawLectureList) {
+	private List<Lecture> getLecturesFromRawLectureList(List<String[]> rawLectureList) {
 
 		TimeZone timeZone = Standalone.TIME_ZONE;
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -190,14 +189,14 @@ public class Standalone {
 
 		List<Lecture> lectures = new ArrayList<Lecture>();
 
-		for (List<String> row : rawLectureList) {
-			String lectureName = row.get(Standalone.LECTURE_NAME_POSITION);
+		for (String[] row : rawLectureList) {
+			String lectureName = row[Standalone.LECTURE_NAME_POSITION];
 
 			Calendar lectureStartDate = null;
 			Calendar startDate = new GregorianCalendar();
 			startDate.setTimeZone(timeZone);
 			try {
-				startDate.setTime(sdf.parse(row.get(Standalone.LECTURE_START_DATE_POSITION)));
+				startDate.setTime(sdf.parse(row[Standalone.LECTURE_START_DATE_POSITION]));
 				lectureStartDate = startDate;
 			} catch (ParseException e) {
 				System.err.println("Cannot parse start date of the lecture \"" + lectureName + "\"");
@@ -207,14 +206,14 @@ public class Standalone {
 			Calendar endDate = new GregorianCalendar();
 			endDate.setTimeZone(timeZone);
 			try {
-				endDate.setTime(sdf.parse(row.get(Standalone.LECTURE_END_DATE_POSITION)));
+				endDate.setTime(sdf.parse(row[Standalone.LECTURE_END_DATE_POSITION]));
 				lectureEndDate = endDate;
 			} catch (ParseException e) {
 				System.err.println("Cannot parse end date of the lecture \"" + lectureName + "\"");
 			}
 
 			String[] lectureResources = null;
-			String resourcesString = row.get(Standalone.LECTURE_RESOURCES_POSITION);
+			String resourcesString = row[Standalone.LECTURE_RESOURCES_POSITION];
 			if (resourcesString != null) {
 				String[] resources = resourcesString.split(", ");
 				List<String> rooms = new ArrayList<String>();
@@ -227,7 +226,7 @@ public class Standalone {
 			}
 
 			String[] lectureLecturers = null;
-			String lecturers = row.get(Standalone.LECTURE_LECTURERS_POSITION);
+			String lecturers = row[Standalone.LECTURE_LECTURERS_POSITION];
 			if (lecturers != null) {
 				lectureLecturers = lecturers.split(", ");
 			}
@@ -246,12 +245,12 @@ public class Standalone {
 	 * @param rawLectureList The raw list of lectures
 	 * @return The most common class name from the raw lecture list
 	 */
-	private String getMostCommonClassName(List<List<String>> rawLectureList) {
+	private String getMostCommonClassName(List<String[]> rawLectureList) {
 
 		Map<String, Integer> classNames = new HashMap<String, Integer>();
 
-		for (List<String> row : rawLectureList) {
-			String element = row.get(Standalone.LECTURE_RESOURCES_POSITION);
+		for (String[] row : rawLectureList) {
+			String element = row[Standalone.LECTURE_RESOURCES_POSITION];
 			if (element != null) {
 				String[] resources = element.split(", ");
 				for (String resource : resources) {
@@ -280,12 +279,12 @@ public class Standalone {
 	 * @return A raw list of lectures
 	 * @throws IOException If reading CSV file failed
 	 */
-	public static List<List<String>> CSVToTwoDimList(String filename, String separator, boolean hasTitleLine)
+	public static List<String[]> CSVToTwoDimList(String filename, String separator, boolean hasTitleLine)
 			throws IOException {
 		BufferedReader bufferedReader = null;
 		String line;
 
-		List<List<String>> list = new ArrayList<List<String>>();
+		List<String[]> list = new ArrayList<String[]>();
 
 		try {
 			bufferedReader = new BufferedReader(new FileReader(filename));
@@ -293,7 +292,12 @@ public class Standalone {
 				bufferedReader.readLine();
 			}
 			while ((line = bufferedReader.readLine()) != null) {
-				List<String> elements = Arrays.asList(line.split(separator));
+				String[] rawElements = line.split(separator);
+				String[] elements = new String[5];
+				int maxSize = Math.min(rawElements.length, elements.length);
+				for (int i = 0; i < maxSize; i++) {
+					elements[i] = rawElements[i];
+				}
 				list.add(elements);
 			}
 		} finally {

@@ -825,8 +825,6 @@ public class LectureWorkbook {
 				sheet.addMergedRegion(cellRange);
 				mergedSuccessful = true;
 			} catch (IllegalStateException e) {
-
-				// TODO parallel lecture handling
 				System.err.println("skipped lecture: " + lecture.getName() + " at " + lecture.getStartDate() + " - "
 						+ lecture.getEndDate());
 			}
@@ -895,8 +893,14 @@ public class LectureWorkbook {
 			String endTime = LectureWorkbook.getTime(lecture.getEndDate());
 			text += LectureWorkbook.LINE_BREAK + startTime + "-" + endTime;
 		}
-		text += LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getLecturers())
-				+ LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getResources());
+		String[] lecturers = lecture.getLecturers();
+		if (lecturers != null) {
+			text += LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecturers);
+		}
+		String[] resources = lecture.getResources();
+		if (resources != null) {
+			text += LectureWorkbook.LINE_BREAK + LectureWorkbook.arrayToString(lecture.getResources());
+		}
 		// TODO move following lines to ApachePOIWrapper?
 		XSSFRichTextString richText = new XSSFRichTextString(text);
 		richText.applyFont(mainFont);
@@ -983,10 +987,12 @@ public class LectureWorkbook {
 	 */
 	private static String arrayToString(String[] array) {
 		String string = "";
-		for (String element : array) {
-			string += "," + element;
+		if (array != null) {
+			for (String element : array) {
+				string += "," + element;
+			}
+			string = string == "" ? "" : string.substring(1);
 		}
-		string = string == "" ? "" : string.substring(1);
 		return string;
 	}
 
