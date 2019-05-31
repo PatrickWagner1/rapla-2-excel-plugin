@@ -134,7 +134,7 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 
 			lectureWorkbook.setLectures(lectures);
 			lectureWorkbook.saveToFile(path);
-			this.exportFinished(getMainComponent());
+			this.exportFinished(getMainComponent(), lectureWorkbook.getErrorOutput().getErrorOutput());
 		}
 	}
 
@@ -142,11 +142,18 @@ public class Export2ExcelMenu extends RaplaGUIComponent implements IdentifiableM
 	 * Shows dialog window with export finished message.
 	 * 
 	 * @param topLevel
+	 * @param errorLogging The error logging of the export (empty string, if no
+	 *                     errors occurred)
 	 * @return
 	 */
-	protected boolean exportFinished(Component topLevel) {
+	protected boolean exportFinished(Component topLevel, String errorLogging) {
+		if (errorLogging == null) {
+			errorLogging = "";
+		}
 		try {
-			DialogUI dlg = DialogUI.create(getContext(), topLevel, true, getString("export"), getString("file_saved"),
+			errorLogging = errorLogging.replace("\n", "<br>");
+			String dialogText = getString("file_saved") + "<br>" + errorLogging;
+			DialogUI dlg = DialogUI.create(getContext(), topLevel, true, getString("export"), dialogText,
 					new String[] { getString("ok") });
 			dlg.setIcon(getIcon("icon.export"));
 			dlg.setDefault(0);

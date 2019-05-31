@@ -1,4 +1,4 @@
-package semesterTimeTable.excel;
+package semesterTimeTable.excel.standalone;
 
 import java.awt.Frame;
 import java.awt.Image;
@@ -11,7 +11,9 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
-public class StandaloneFrame extends Frame {
+import semesterTimeTable.excel.Output;
+
+public class StandaloneFrame extends Frame implements Output {
 
 	/** Default serial version UID */
 	private static final long serialVersionUID = 1L;
@@ -45,7 +47,7 @@ public class StandaloneFrame extends Frame {
 	 * 
 	 * @param text The text to add to the text area
 	 */
-	public void addTextLine(String text) {
+	public void println(String text) {
 		String newText = this.textArea.getText() + StandaloneFrame.LINE_BREAK + text;
 		this.textArea.setText(newText);
 	}

@@ -236,4 +236,73 @@ public class Lecture {
 	private void setLecturers(String lecturer) {
 		this.lecturers = new String[] { lecturer };
 	}
+
+	/**
+	 * Returns the lecture in the format {@link #getName() name} (start date - end
+	 * date) as string.
+	 * 
+	 * @return The lecture name and dates as string
+	 */
+	public String toShortString() {
+		Calendar startDate = this.getStartDate();
+		Calendar endDate = this.getEndDate();
+
+		String startDateString = Lecture.calendarToDateString(startDate);
+		String endDateString = Lecture.calendarToDateString(endDate);
+
+		String startDateTimeString = Lecture.calendarToDateTimeString(startDate);
+		String endDateTimeString = startDateString.equals(endDateString) ? Lecture.calendarToTimeString(endDate)
+				: Lecture.calendarToDateTimeString(endDate);
+
+		return this.getName() + " (" + startDateTimeString + " - " + endDateTimeString + ")";
+	}
+
+	/**
+	 * Converts the date and time of the given calendar in the format "dd.mm.yyyy
+	 * hh:mm".
+	 * 
+	 * @param calendar The calendar to convert
+	 * @return The date and time of the calendar
+	 */
+	public static String calendarToDateTimeString(Calendar calendar) {
+		String date = Lecture.calendarToDateString(calendar);
+		String time = Lecture.calendarToTimeString(calendar);
+		return date + " " + time;
+	}
+
+	/**
+	 * Converts the date of the given calendar in the format "dd.mm.yyyy".
+	 * 
+	 * @param calendar The calendar to convert
+	 * @return The date of the calendar
+	 */
+	public static String calendarToDateString(Calendar calendar) {
+		String dayOfMonth = Lecture.NumberToTwoDigitString(calendar.get(Calendar.DAY_OF_MONTH));
+		String month = Lecture.NumberToTwoDigitString(calendar.get(Calendar.MONTH) + 1);
+		String year = Lecture.NumberToTwoDigitString(calendar.get(Calendar.YEAR));
+		return dayOfMonth + "." + month + "." + year;
+	}
+
+	/**
+	 * Converts the time of the given calendar in the format "hh:mm".
+	 * 
+	 * @param calendar The calendar to convert
+	 * @return The time of the calendar
+	 */
+	public static String calendarToTimeString(Calendar calendar) {
+		String hourOfDay = Lecture.NumberToTwoDigitString(calendar.get(Calendar.HOUR_OF_DAY));
+		String minute = Lecture.NumberToTwoDigitString(calendar.get(Calendar.MINUTE));
+		return hourOfDay + ":" + minute;
+	}
+
+	/**
+	 * Converts the given number into a string. If the number only has one digit, a
+	 * zero will be added in the front.
+	 * 
+	 * @param number The number to convert
+	 * @return The number as a string with minimum two digits
+	 */
+	public static String NumberToTwoDigitString(int number) {
+		return number < 10 && number > -10 ? "0" + number : "" + number;
+	}
 }

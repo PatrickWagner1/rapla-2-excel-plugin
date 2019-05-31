@@ -270,7 +270,7 @@ public class ConfigWorkbook {
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
 		this.ignorePrefixes = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
-				new CellRangeAddress(2, lastRowNum, 3, 3));
+				new CellRangeAddress(2, lastRowNum, 4, 4));
 	}
 
 	/**
@@ -290,7 +290,7 @@ public class ConfigWorkbook {
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
 		String[] localeValues = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
-				new CellRangeAddress(2, lastRowNum, 4, 4));
+				new CellRangeAddress(2, lastRowNum, 5, 5));
 		if (localeValues.length > 0) {
 			String country = localeValues[0];
 			String variant = "";
@@ -325,7 +325,7 @@ public class ConfigWorkbook {
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
 		int[] quarterStartWeeks = ApachePOIWrapper.getIntegerValuesFromWorkbook(sheet,
-				new CellRangeAddress(2, lastRowNum, 5, 5));
+				new CellRangeAddress(2, lastRowNum, 6, 6));
 		if (quarterStartWeeks.length < 1) {
 			quarterStartWeeks = new int[] { 2, 15, 27, 40 };
 		}
@@ -351,7 +351,7 @@ public class ConfigWorkbook {
 	 */
 	private void setExamWeekLength() {
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
-		int[] lengths = ApachePOIWrapper.getIntegerValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 6, 6));
+		int[] lengths = ApachePOIWrapper.getIntegerValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 7, 7));
 		if (lengths.length == 1) {
 			if (lengths[0] < 0) {
 				this.examWeekLength = 0;
@@ -385,8 +385,8 @@ public class ConfigWorkbook {
 	 */
 	private void setQuarterStartDate() {
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
-		Date[] dates = ApachePOIWrapper.getDateValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 7, 7));
-		String[] timeZoneCodes = ApachePOIWrapper.getStringValuesFromWorkbook(sheet, new CellRangeAddress(3, 3, 7, 7));
+		Date[] dates = ApachePOIWrapper.getDateValuesFromWorkbook(sheet, new CellRangeAddress(2, 2, 8, 8));
+		String[] timeZoneCodes = ApachePOIWrapper.getStringValuesFromWorkbook(sheet, new CellRangeAddress(3, 3, 8, 8));
 
 		TimeZone timeZone;
 		Calendar quarterStartDate;
@@ -440,7 +440,7 @@ public class ConfigWorkbook {
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		XSSFRow row = sheet.getRow(2);
 		if (row != null) {
-			XSSFCell cell = row.getCell(8);
+			XSSFCell cell = row.getCell(9);
 			if (cell != null && cell.getCellType() == CellType.STRING) {
 				XSSFRichTextString richText = cell.getRichStringCellValue();
 				XSSFCellStyle cellStyle = cell.getCellStyle();
@@ -527,9 +527,9 @@ public class ConfigWorkbook {
 		XSSFSheet sheet = this.getWorkbook().getSheetAt(0);
 		int lastRowNum = sheet.getLastRowNum();
 		this.lecturePropertiesMap = ConfigWorkbook.getMappedLectureProperties(sheet,
-				new CellRangeAddress(rowNum, lastRowNum, 0, 1));
+				new CellRangeAddress(rowNum, lastRowNum, 1, 2));
 		this.highlightedFonts = ApachePOIWrapper.getMappedFontColor(sheet,
-				new CellRangeAddress(rowNum, lastRowNum, 2, 2));
+				new CellRangeAddress(rowNum, lastRowNum, 3, 3));
 		this.setIgnorePrefixes();
 		this.setHolidayLocale();
 		this.setQuarterStartWeeks();
@@ -554,7 +554,7 @@ public class ConfigWorkbook {
 		XSSFSheet sheet = ApachePOIWrapper.getSheet(this.getWorkbook());
 		int lastRowNum = sheet.getLastRowNum();
 		String[] namesToColor = ApachePOIWrapper.getStringValuesFromWorkbook(sheet,
-				new CellRangeAddress(rowNum, lastRowNum, 0, 0));
+				new CellRangeAddress(rowNum, lastRowNum, 1, 1));
 		this.setIgnorePrefixes();
 
 		for (String lectureName : lectureNames) {
@@ -562,7 +562,7 @@ public class ConfigWorkbook {
 			if (!ConfigWorkbook.arrayContainsWithWildcard(rawLectureName, namesToColor)
 					&& (rawLectureName.equals(lectureName) || !lectureNames.contains(rawLectureName))) {
 
-				rowNum = ConfigWorkbook.addValueToNextEmptyCellInARow(sheet, rawLectureName, rowNum, 0);
+				rowNum = ConfigWorkbook.addValueToNextEmptyCellInARow(sheet, rawLectureName, rowNum, 1);
 
 				rowNum++;
 			}
@@ -570,7 +570,7 @@ public class ConfigWorkbook {
 		lastRowNum = sheet.getLastRowNum();
 		ApachePOIWrapper.saveWorkbookToFile(this.getWorkbook(), this.getFile());
 		this.lecturePropertiesMap = ConfigWorkbook.getMappedLectureProperties(sheet,
-				new CellRangeAddress(2, lastRowNum, 0, 1));
+				new CellRangeAddress(2, lastRowNum, 1, 2));
 	}
 
 	/**

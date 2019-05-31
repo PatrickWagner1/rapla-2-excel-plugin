@@ -58,6 +58,9 @@ public class LectureWorkbook {
 	/** String representing a line break inside a workbook cell */
 	public final static String LINE_BREAK = "\n";
 
+	/** Error Output for printing errors */
+	private ErrorOutput errorOutput;
+
 	/**
 	 * Object containing style (especially color) configurations from a workbook for
 	 * the lectures
@@ -136,6 +139,7 @@ public class LectureWorkbook {
 	 * @throws IOException If reading one workbook file failed
 	 */
 	public LectureWorkbook(String filename) throws IOException {
+		this.errorOutput = new ErrorOutput();
 		File file = new File(filename);
 		this.setConfigWorkbook(new ConfigWorkbook(file.getParent()));
 		if (file.exists()) {
@@ -150,6 +154,48 @@ public class LectureWorkbook {
 		if (quarterStartDate != null) {
 			this.setBorderDatesWithDateInFirstWeek(quarterStartDate);
 		}
+	}
+
+	/**
+	 * Loads the workbook of the given filename, if the file exists. If not a
+	 * workbook template will be loaded. Insert the given lectures into the workbook
+	 * by using the styles of the colorWorkbook. If there is an excel file called
+	 * colorMap.xlsx in the directory of the file, it will be loaded as custom
+	 * colorWorkbook.
+	 * 
+	 * @param filename    The path to the workbook file
+	 * @param errorOutput The object for error outputs
+	 * @throws IOException If reading one workbook file failed
+	 */
+	public LectureWorkbook(String filename, Output output) throws IOException {
+		this.errorOutput = new ErrorOutput(output);
+		File file = new File(filename);
+		this.setConfigWorkbook(new ConfigWorkbook(file.getParent()));
+		if (file.exists()) {
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromFile(file));
+		} else {
+			this.setWorkbook(ApachePOIWrapper.loadWorkbookFromInputStream(
+					LectureWorkbook.getTemplateInputStream(LectureWorkbook.TEMPLATE_FILENAME)));
+		}
+		this.setBorderLists();
+		this.createBorderStyles();
+		Calendar quarterStartDate = this.getConfigWorkbook().getQuarterStartDate();
+		if (quarterStartDate != null) {
+			this.setBorderDatesWithDateInFirstWeek(quarterStartDate);
+		}
+	}
+
+	/**
+	 * Returns the error output object.
+	 * 
+	 * You can use the error output as a kind of error logging object. If for
+	 * example a lecture cannot be added to the excel workbook, the error message
+	 * will be added to the error output.
+	 * 
+	 * @return The error output object
+	 */
+	public ErrorOutput getErrorOutput() {
+		return this.errorOutput;
 	}
 
 	/**
@@ -595,8 +641,13 @@ public class LectureWorkbook {
 			Map<Lecture, CellRangeAddress> lectureCellRangeMap = new HashMap<Lecture, CellRangeAddress>();
 			for (Lecture lecture : lectureListEntry.getValue()) {
 				CellRangeAddress cellRange = LectureWorkbook.getCellRangeFromLecture(quarterStartDate, lecture);
-				lectureCellRangeMap.put(lecture, cellRange);
-				cellRanges.add(cellRange);
+				if (cellRange != null) {
+					lectureCellRangeMap.put(lecture, cellRange);
+					cellRanges.add(cellRange);
+				} else {
+					this.getErrorOutput().addErrorMessage("Skipped the lecture \"" + lecture.toShortString()
+							+ "\", because the lecture date is not in the visible semester time table.");
+				}
 			}
 			groupedLecturesCellRangeMap.put(lectureListEntry.getKey(), lectureCellRangeMap);
 		}
@@ -693,6 +744,7 @@ public class LectureWorkbook {
 	 */
 	private static void adjustOverlappingCellRanges(List<CellRangeAddress> cellRanges) {
 
+		cellRanges.sort((CellRangeAddress a, CellRangeAddress b) -> a.getLastRow() - b.getLastRow());
 		cellRanges.sort((CellRangeAddress a, CellRangeAddress b) -> a.getFirstRow() - b.getFirstRow());
 
 		while (cellRanges.size() > 0) {
@@ -824,9 +876,9 @@ public class LectureWorkbook {
 			try {
 				sheet.addMergedRegion(cellRange);
 				mergedSuccessful = true;
-			} catch (IllegalStateException e) {
-				System.err.println("skipped lecture: " + lecture.getName() + " at " + lecture.getStartDate() + " - "
-						+ lecture.getEndDate());
+			} catch (IllegalStateException | IllegalArgumentException e) {
+				this.errorOutput.addErrorMessage("Skipped the lecture \"" + lecture.toShortString()
+						+ "\", because the cell range for the lecture cannot be merged. Maybe there is a problem with overlapping lectures.");
 			}
 		}
 

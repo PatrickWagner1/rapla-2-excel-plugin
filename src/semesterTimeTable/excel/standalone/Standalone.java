@@ -1,4 +1,4 @@
-package semesterTimeTable.excel;
+package semesterTimeTable.excel.standalone;
 
 import java.awt.FileDialog;
 import java.io.BufferedReader;
@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.Map.Entry;
+
+import semesterTimeTable.excel.Lecture;
+import semesterTimeTable.excel.LectureWorkbook;
 
 public class Standalone {
 
@@ -69,15 +72,15 @@ public class Standalone {
 		StandaloneFrame standaloneFrame = this.getStandaloneFrame();
 		String csvFileName = this.loadFile();
 		if (csvFileName != null && csvFileName != "") {
-			standaloneFrame.addTextLine("Scanning CSV File...");
+			standaloneFrame.println("Scanning CSV File...");
 			List<String[]> rawLectureList = Standalone.CSVToTwoDimList(csvFileName, Standalone.CELL_BREAK, true);
 			String mostCommonClassName = this.getMostCommonClassName(rawLectureList);
 			String filename = this.getDefaultFileName(mostCommonClassName);
-			standaloneFrame.addTextLine("Waiting for excel file selection...");
+			standaloneFrame.println("Waiting for excel file selection...");
 			String path = this.saveFile(filename);
 			if (path != null) {
-				standaloneFrame.addTextLine("Converting CSV file to excel file...");
-				LectureWorkbook lectureWorkbook = new LectureWorkbook(path);
+				standaloneFrame.println("Converting CSV file to excel file...");
+				LectureWorkbook lectureWorkbook = new LectureWorkbook(path, standaloneFrame);
 
 				List<Lecture> lectures = this.getLecturesFromRawLectureList(rawLectureList);
 
@@ -89,14 +92,19 @@ public class Standalone {
 
 				lectureWorkbook.setLectures(lectures);
 				lectureWorkbook.saveToFile(path);
-				standaloneFrame.addTextLine("Export completed successfully!");
-				int secondsToWait = 2;
-				try {
-					Thread.sleep(secondsToWait * 1000);
-				} catch (InterruptedException e) {
-					System.err.println("Waiting for" + secondsToWait + "seconds failed");
+				String errorOutput = lectureWorkbook.getErrorOutput().getErrorOutput();
+				if (errorOutput == null || errorOutput == "") {
+					standaloneFrame.println("Export completed successfully!");
+					int secondsToWait = 2;
+					try {
+						Thread.sleep(secondsToWait * 1000);
+					} catch (InterruptedException e) {
+						System.err.println("Waiting for" + secondsToWait + "seconds failed");
+					}
+					standaloneFrame.close();
+				} else {
+					standaloneFrame.println("Export completed with some failures!");
 				}
-				standaloneFrame.close();
 			}
 		}
 	}
@@ -344,8 +352,8 @@ public class Standalone {
 		Standalone standalone = new Standalone();
 		try {
 			standalone.export();
-		} catch (IOException e) {
-			standalone.getStandaloneFrame().addTextLine(e.getMessage());
+		} catch (Exception e) {
+			standalone.getStandaloneFrame().println(e.toString());
 		}
 	}
 }
