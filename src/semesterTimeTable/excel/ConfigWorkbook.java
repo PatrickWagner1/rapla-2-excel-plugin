@@ -609,7 +609,7 @@ public class ConfigWorkbook {
 					shortLectureName = shortLectureName == null ? "" : shortLectureName;
 
 					LectureProperties lectureProperties = new LectureProperties(lectureName, shortLectureName,
-							cellStyle.getFont().getXSSFColor(), fillColor);
+							cellStyle.getFont(), fillColor);
 					lecturePropertiesMap.put(lectureName, lectureProperties);
 				}
 			}

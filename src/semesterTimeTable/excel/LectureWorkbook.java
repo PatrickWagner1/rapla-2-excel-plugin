@@ -29,7 +29,6 @@ import org.apache.poi.ss.util.CellAddress;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFFormulaEvaluator;
 import org.apache.poi.xssf.usermodel.XSSFRichTextString;
@@ -821,10 +820,7 @@ public class LectureWorkbook {
 			LectureProperties lectureProperties = LectureWorkbook.getLecturePropertiesFromMap(rawLectureName,
 					lecturePropertiesMap);
 
-			XSSFColor fontColor = null;
-			XSSFFont mainFont = new XSSFFont();
-			mainFont.setFontHeight((short) 200);
-			mainFont.setFontName("Arial");
+			XSSFFont mainFont = null;
 
 			XSSFCellStyle cellStyle = this.getWorkbook().createCellStyle();
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -832,7 +828,7 @@ public class LectureWorkbook {
 			cellStyle.setVerticalAlignment(VerticalAlignment.TOP);
 			String shortLectureName = rawLectureName == LectureWorkbook.HOLIDAY ? "" : groupedLectureName;
 			if (lectureProperties != null) {
-				fontColor = lectureProperties.getFontColor();
+				mainFont = lectureProperties.getFont();
 				cellStyle.setFillForegroundColor(lectureProperties.getFillColor());
 				String subShortLectureName = lectureProperties.getShortLectureName();
 				if (subShortLectureName != "") {
@@ -840,9 +836,11 @@ public class LectureWorkbook {
 							lectureProperties.getShortLectureName());
 				}
 			} else {
+				mainFont = new XSSFFont();
+				mainFont.setFontHeight((short) 200);
+				mainFont.setFontName("Arial");
 				cellStyle.setFillForegroundColor(ApachePOIWrapper.colorToXSSFColor(Color.WHITE));
 			}
-			mainFont.setColor(fontColor);
 
 			for (Entry<Lecture, CellRangeAddress> lectureCellRangeEntry : lectureCellRangeMap.entrySet()) {
 				Lecture lecture = lectureCellRangeEntry.getKey();
