@@ -810,7 +810,13 @@ public class LectureWorkbook {
 
 		ConfigWorkbook configWorkbook = this.getConfigWorkbook();
 		Map<String, LectureProperties> lecturePropertiesMap = configWorkbook.getLecturePropertiesMap();
-		Map<String, XSSFFont> highlightedFonts = configWorkbook.getHighlightedFonts();
+		Map<String, XSSFFont> highlightedFontsRaw = configWorkbook.getHighlightedFonts();
+		Map<String, XSSFFont> highlightedFonts = new HashMap<String, XSSFFont>();
+		for (Entry<String, XSSFFont> highlightedFontRaw : highlightedFontsRaw.entrySet()) {
+			XSSFFont highlightedFont = workbook.createFont();
+			ApachePOIWrapper.copyFont(highlightedFont, highlightedFontRaw.getValue());
+			highlightedFonts.put(highlightedFontRaw.getKey(), highlightedFont);
+		}
 		String[] ignorePrefixes = configWorkbook.getIgnorePrefixes();
 
 		Map<String, Map<Lecture, CellRangeAddress>> groupedLecturesCellRangeMap = this

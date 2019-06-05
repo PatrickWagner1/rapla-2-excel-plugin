@@ -262,7 +262,7 @@ public final class ApachePOIWrapper {
 	public static void copyFont(XSSFFont font, XSSFFont fontToCopy) {
 		font.setBold(fontToCopy.getBold());
 		font.setItalic(fontToCopy.getItalic());
-		font.setColor(fontToCopy.getColor());
+		font.setColor(fontToCopy.getXSSFColor());
 		font.setFontHeight(fontToCopy.getFontHeight());
 		font.setFontName(fontToCopy.getFontName());
 		font.setStrikeout(fontToCopy.getStrikeout());
