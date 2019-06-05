@@ -137,8 +137,6 @@ public final class ApachePOIWrapper {
 					String key = cell.getStringCellValue();
 					if (key != null && key != "") {
 						XSSFFont font = new XSSFFont();
-						font.setFontHeight((short) 200);
-						font.setFontName("Arial");
 						font.setColor(cell.getCellStyle().getFont().getXSSFColor());
 						fontMap.put(key, font);
 					}
@@ -253,6 +251,22 @@ public final class ApachePOIWrapper {
 		out.write(content);
 		out.flush();
 		out.close();
+	}
+
+	/**
+	 * Copy all relevant font properties from the given font to copy to the font.
+	 * 
+	 * @param font       The font to copy the properties to
+	 * @param fontToCopy The font to copy the properties from
+	 */
+	public static void copyFont(XSSFFont font, XSSFFont fontToCopy) {
+		font.setBold(fontToCopy.getBold());
+		font.setItalic(fontToCopy.getItalic());
+		font.setColor(fontToCopy.getColor());
+		font.setFontHeight(fontToCopy.getFontHeight());
+		font.setFontName(fontToCopy.getFontName());
+		font.setStrikeout(fontToCopy.getStrikeout());
+		font.setUnderline(fontToCopy.getUnderline());
 	}
 
 }

@@ -247,14 +247,19 @@ public class LectureWorkbook {
 		if (firstColumn < 22) {
 			sheet.addMergedRegion(new CellRangeAddress(139, 146, firstColumn, 21));
 			XSSFCell cell = sheet.getRow(139).getCell(firstColumn);
+			XSSFWorkbook workbook = this.getWorkbook();
 
-			XSSFCellStyle cellStyle = this.getWorkbook().createCellStyle();
+			XSSFCellStyle cellStyle = workbook.createCellStyle();
 			cellStyle.setFillForegroundColor(configWorkbook.getExamWeekFillColor());
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			cellStyle.setWrapText(true);
 			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 			cellStyle.setAlignment(HorizontalAlignment.CENTER);
-			cellStyle.setFont(configWorkbook.getExamWeekFont());
+
+			XSSFFont font = workbook.createFont();
+			XSSFFont examWeekFont = configWorkbook.getExamWeekFont();
+			ApachePOIWrapper.copyFont(font, examWeekFont);
+			cellStyle.setFont(font);
 
 			cell.setCellStyle(cellStyle);
 			cell.setCellValue(configWorkbook.getExamWeekText());
@@ -801,6 +806,8 @@ public class LectureWorkbook {
 	 * of the workbook sheet.
 	 */
 	private void addLecturesToWorkbook() {
+		XSSFWorkbook workbook = this.getWorkbook();
+
 		ConfigWorkbook configWorkbook = this.getConfigWorkbook();
 		Map<String, LectureProperties> lecturePropertiesMap = configWorkbook.getLecturePropertiesMap();
 		Map<String, XSSFFont> highlightedFonts = configWorkbook.getHighlightedFonts();
@@ -808,6 +815,17 @@ public class LectureWorkbook {
 
 		Map<String, Map<Lecture, CellRangeAddress>> groupedLecturesCellRangeMap = this
 				.mapCellRangesForParallelLectures(this.getGroupedLectures());
+
+		XSSFFont defaultFont = workbook.createFont();
+		defaultFont.setFontHeight((short) 200);
+		defaultFont.setFontName("Arial");
+
+		XSSFCellStyle defaultCellStyle = workbook.createCellStyle();
+		defaultCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+		defaultCellStyle.setWrapText(true);
+		defaultCellStyle.setVerticalAlignment(VerticalAlignment.TOP);
+		defaultCellStyle.setFillForegroundColor(ApachePOIWrapper.colorToXSSFColor(Color.WHITE));
+		defaultCellStyle.setFont(defaultFont);
 
 		for (Entry<String, Map<Lecture, CellRangeAddress>> groupedLecture : groupedLecturesCellRangeMap.entrySet()) {
 			Map<Lecture, CellRangeAddress> lectureCellRangeMap = groupedLecture.getValue();
@@ -821,25 +839,31 @@ public class LectureWorkbook {
 					lecturePropertiesMap);
 
 			XSSFFont mainFont = null;
+			XSSFCellStyle cellStyle = null;
 
-			XSSFCellStyle cellStyle = this.getWorkbook().createCellStyle();
-			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-			cellStyle.setWrapText(true);
-			cellStyle.setVerticalAlignment(VerticalAlignment.TOP);
 			String shortLectureName = rawLectureName == LectureWorkbook.HOLIDAY ? "" : groupedLectureName;
 			if (lectureProperties != null) {
-				mainFont = lectureProperties.getFont();
+				mainFont = workbook.createFont();
+
+				cellStyle = workbook.createCellStyle();
+				cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+				cellStyle.setWrapText(true);
+				cellStyle.setVerticalAlignment(VerticalAlignment.TOP);
+
+				XSSFFont lectureFont = lectureProperties.getFont();
+				ApachePOIWrapper.copyFont(mainFont, lectureFont);
+
 				cellStyle.setFillForegroundColor(lectureProperties.getFillColor());
+				cellStyle.setFont(mainFont);
+
 				String subShortLectureName = lectureProperties.getShortLectureName();
 				if (subShortLectureName != "") {
 					shortLectureName = shortLectureName.replace(rawLectureName,
 							lectureProperties.getShortLectureName());
 				}
 			} else {
-				mainFont = new XSSFFont();
-				mainFont.setFontHeight((short) 200);
-				mainFont.setFontName("Arial");
-				cellStyle.setFillForegroundColor(ApachePOIWrapper.colorToXSSFColor(Color.WHITE));
+				mainFont = defaultFont;
+				cellStyle = defaultCellStyle;
 			}
 
 			for (Entry<Lecture, CellRangeAddress> lectureCellRangeEntry : lectureCellRangeMap.entrySet()) {
@@ -954,9 +978,14 @@ public class LectureWorkbook {
 		// TODO move following lines to ApachePOIWrapper?
 		XSSFRichTextString richText = new XSSFRichTextString(text);
 		richText.applyFont(mainFont);
+		short mainFontHeight = mainFont.getFontHeight();
+		String mainFontName = mainFont.getFontName();
 		for (Entry<XSSFFont, Integer[]> lectureNameFont : lectureNameFonts.entrySet()) {
 			Integer[] indexes = lectureNameFont.getValue();
-			richText.applyFont(indexes[0], indexes[1], lectureNameFont.getKey());
+			XSSFFont nameFont = lectureNameFont.getKey();
+			nameFont.setFontHeight(mainFontHeight);
+			nameFont.setFontName(mainFontName);
+			richText.applyFont(indexes[0], indexes[1], nameFont);
 		}
 		return richText;
 	}
